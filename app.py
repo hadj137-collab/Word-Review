@@ -10,7 +10,7 @@ st.caption("例句自動挖空填空題 ＋ Score 篩選")
 # ==========================================
 # 📌 請在此處貼上你從 Google 試算表發布取得的 CSV 網址
 # ==========================================
-GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1p4wj-mOuIDYFU81JAIwYOhDfVF5PPrDyidCtMLtowGs/pub?output=csv" # 請替換成你實際的網址
+GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1p4wj-mOuIDYFU81JAIwYOhDfVF5PPrDyidCtMLtowGs/export?format=csv" # 請替換成你實際的網址
 
 # === 核心邏輯：自動從雲端下載 Excel/CSV 資料 ===
 @st.cache_data(ttl=600)
