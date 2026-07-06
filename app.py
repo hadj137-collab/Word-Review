@@ -9,23 +9,23 @@ st.markdown("""
     <style>
     /* 移除 Streamlit 頂部區塊多餘空白，並留出足夠高度避開工具列 */
     .block-container {
-        padding-top: 3.5rem !important;
-        padding-bottom: 1rem !important;
+        padding-top: 2.6rem !important;
+        padding-bottom: 0.5rem !important;
     }
     /* Streamlit 頂部工具列（Share/⭐/✏️/GitHub）會蓋住內容，讓它變透明且不占版面高度 */
     header[data-testid="stHeader"] {
         background: transparent !important;
-        height: 2.5rem !important;
+        height: 2rem !important;
     }
     /* 精緻標題樣式：確保文字絕對不被切到 */
     .custom-title {
-        font-size: 20px !important;
+        font-size: 18px !important;
         font-weight: bold;
-        margin-top: 0.5rem !important;
-        margin-bottom: 12px !important;
-        line-height: 1.6 !important;
+        margin-top: 0.2rem !important;
+        margin-bottom: 4px !important;
+        line-height: 1.4 !important;
         color: #FFFFFF;
-        padding-top: 4px;
+        padding-top: 2px;
     }
     /* 🎯 修正：只有在特定的分數按鈕容器內，才強制左右並排 50% */
     .score-container [data-testid="column"] {
@@ -35,7 +35,30 @@ st.markdown("""
     }
     /* 緊縮所有元件的上下間距，騰出更多垂直空間 */
     .element-container {
-        margin-bottom: 0.3rem !important;
+        margin-bottom: 0.05rem !important;
+    }
+    /* 壓縮 block 之間的垂直間距 */
+    [data-testid="stVerticalBlock"] {
+        gap: 0.25rem !important;
+    }
+    /* 縮小單字卡容器內邊距 */
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        padding: 0.4rem !important;
+    }
+    /* 縮小所有按鈕的上下內邊距與高度 */
+    div.stButton > button {
+        padding: 0.25rem 0.5rem !important;
+        min-height: 2.2rem !important;
+        line-height: 1.2 !important;
+    }
+    /* 縮小 info/success 提示框的內邊距 */
+    div[data-testid="stAlert"] {
+        padding: 0.5rem 0.8rem !important;
+    }
+    /* 縮小進度條與其文字的間距 */
+    div[data-testid="stProgress"] {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
     }
     </style>
 """, unsafe_allow_html=True)
