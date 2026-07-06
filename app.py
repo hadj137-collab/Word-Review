@@ -100,8 +100,11 @@ st.sidebar.header("⚙️ 設定與功能")
 available_sheets = fetch_all_sheet_names(API_URL)
 selected_sheet = st.sidebar.selectbox("請選擇要複習的分頁", options=available_sheets, index=0)
 
+# 🎯 點擊同步：清除舊快取，觸發重新排序邏輯
 if st.sidebar.button("🔄 同步雲端最新單字"):
     st.cache_data.clear()
+    if "current_state_key" in st.session_state:
+        del st.session_state["current_state_key"]
     st.rerun()
 
 df = load_data_from_sheet(GOOGLE_SHEET_ID, selected_sheet)
@@ -120,12 +123,14 @@ if df is not None:
         st.warning("⚠️ 目前選取的 Score 條件下沒有任何單字。")
         st.stop()
 
-    # 🎯 初始化邏輯：同分隨打散，但整體嚴格按照 Score 從低到高排序
+    # 🎯 初始化與排序邏輯
     state_key = f"vocab_drive_{selected_sheet}_{str(selected_scores)}"
     if st.session_state.get("current_state_key") != state_key:
         raw_list = filtered_df.to_dict(orient='records')
-        random.shuffle(raw_list)  # 先隨機打散（讓同分數的單字順序隨機）
-        st.session_state.vocab_list = sorted(raw_list, key=lambda x: x['Score'])  # 再嚴格依分數由低到高排序
+        # 先進行隨機打散，避免同分數的單字每次出現順序都一模一樣
+        random.shuffle(raw_list)  
+        # 🎯 核心優化：依 Score 從小到大排序（分數低的排前面優先複習）
+        st.session_state.vocab_list = sorted(raw_list, key=lambda x: x['Score'])  
         st.session_state.current_index = 0
         st.session_state.show_definition = False
         st.session_state.current_state_key = state_key
@@ -133,19 +138,13 @@ if df is not None:
     vocab_list = st.session_state.vocab_list
     current_idx = st.session_state.current_index
     
-    # 防呆機制：全數複習完畢
+    # 🎯 自動重開下一輪機制：當全部刷完時
     if current_idx >= len(vocab_list):
-        st.success("🎉 太棒了！當前篩選條件下的單字已全數複習完畢！")
-        
-        # 🎯 核心修正：點擊「再複習一次」時，重新執行一次「同分隨機、整體由低到高排序」
-        if st.button("🔄 再複習一次", type="primary", use_container_width=True):
-            st.session_state.current_index = 0
-            st.session_state.show_definition = False
-            
-            # 從原本篩選好的 dataframe 重新拿資料，確保不會漏掉或包含未篩選單字
-            raw_list = filtered_df.to_dict(orient='records')
-            random.shuffle(raw_list)  # 內部隨機洗牌
-            st.session_state.vocab_list = sorted(raw_list, key=lambda x: x['Score'])  # 確保最低分絕對排在最前面
+        st.cache_data.clear() # 清空舊快取，確保去撈 Google 剛剛最新修改完的分數
+        if "current_state_key" in st.session_state:
+            del st.session_state["current_state_key"] # 刪除 key 迫使下一次讀取時重新抓取分數並由低到高排序
+        st.success("🎉 本輪複習完畢！已自動為您同步雲端最新分數，並從分數最低的單字重新開始！")
+        if st.button("🚀 開始下一輪複習", type="primary", use_container_width=True):
             st.rerun()
         st.stop()
 
