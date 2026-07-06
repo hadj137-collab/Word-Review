@@ -68,6 +68,9 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# 顯示標題
+st.markdown('<p class="custom-title">單字複習APP</p>', unsafe_allow_html=True)
+
 # ===================================================
 # 🔗 請填入你的 Google 試算表 CSV 連結與你部署的 App Script 網址
 # ===================================================
@@ -146,13 +149,13 @@ if df is not None:
     hidden_sentence = pattern.sub(" `_______` ", full_sentence)
     
     # === 顯示單字卡內容 ===
-    with st.container(height=220, border=True):
+    with st.container(height=180, border=True):  # 稍微縮小高度，畫面更緊湊
         if not st.session_state.show_definition:
             st.info(hidden_sentence)
-            st.markdown(f"<p style='text-align: center; color: #FF4B4B; font-weight: bold; margin-top: 5px; margin-bottom: 5px;'>當前單字 Score：{current_vocab['Score']}</p>", unsafe_allow_html=True)
+            # 已移除原本在這裡顯示的「當前單字 Score」文字
         else:
-            st.markdown(f"<h2 style='text-align: center; color: #4A90E2; font-size: 26px; margin-top: 2px; margin-bottom: 2px;'>{target_word}</h2>", unsafe_allow_html=True)
-            st.markdown(f"<p style='text-align: center; color: #888888; margin-bottom: 4px;'>Score：{current_vocab['Score']}</p>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align: center; color: #4A90E2; font-size: 26px; margin-top: 2px; margin-bottom: 6px;'>{target_word}</h2>", unsafe_allow_html=True)
+            # 已移除原本在這裡顯示的「Score」文字
             st.success(full_sentence)
 
     # 🛠️ 使用客製化容器包裹，確保左右並排的網頁底層死指令只適用於這兩個加減分按鈕
