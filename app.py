@@ -83,14 +83,12 @@ def load_data_from_sheet(sheet_id, sheet_name):
         st.error(f"讀取分頁 [{sheet_name}] 失敗: {e}")
         return None
 
-# 🎯 修正重點：拿掉內部的 clear()，避免當前複習進度被強制洗牌
 def update_score_in_cloud(word, action, sheet_name):
     with st.spinner("正在同步修改雲端分數..."):
         try:
             res = requests.get(API_URL, params={"word": word, "action": action, "sheetName": sheet_name})
             if "Success" in res.text:
                 st.toast(f"✅ 雲端同步成功！")
-                # 🚫 這裡不再執行 st.cache_data.clear()，確保當前 index 順暢執行下去
             else:
                 st.error(f"雲端改分失敗: {res.text}")
         except Exception as e:
@@ -122,11 +120,12 @@ if df is not None:
         st.warning("⚠️ 目前選取的 Score 條件下沒有任何單字。")
         st.stop()
 
+    # 🎯 初始化邏輯：同分隨打散，但整體嚴格按照 Score 從低到高排序
     state_key = f"vocab_drive_{selected_sheet}_{str(selected_scores)}"
     if st.session_state.get("current_state_key") != state_key:
         raw_list = filtered_df.to_dict(orient='records')
-        random.shuffle(raw_list)  
-        st.session_state.vocab_list = sorted(raw_list, key=lambda x: x['Score'])  
+        random.shuffle(raw_list)  # 先隨機打散（讓同分數的單字順序隨機）
+        st.session_state.vocab_list = sorted(raw_list, key=lambda x: x['Score'])  # 再嚴格依分數由低到高排序
         st.session_state.current_index = 0
         st.session_state.show_definition = False
         st.session_state.current_state_key = state_key
@@ -137,11 +136,16 @@ if df is not None:
     # 防呆機制：全數複習完畢
     if current_idx >= len(vocab_list):
         st.success("🎉 太棒了！當前篩選條件下的單字已全數複習完畢！")
+        
+        # 🎯 核心修正：點擊「再複習一次」時，重新執行一次「同分隨機、整體由低到高排序」
         if st.button("🔄 再複習一次", type="primary", use_container_width=True):
             st.session_state.current_index = 0
             st.session_state.show_definition = False
-            random.shuffle(st.session_state.vocab_list)
-            st.session_state.vocab_list = sorted(st.session_state.vocab_list, key=lambda x: x['Score'])
+            
+            # 從原本篩選好的 dataframe 重新拿資料，確保不會漏掉或包含未篩選單字
+            raw_list = filtered_df.to_dict(orient='records')
+            random.shuffle(raw_list)  # 內部隨機洗牌
+            st.session_state.vocab_list = sorted(raw_list, key=lambda x: x['Score'])  # 確保最低分絕對排在最前面
             st.rerun()
         st.stop()
 
