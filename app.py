@@ -83,13 +83,14 @@ def load_data_from_sheet(sheet_id, sheet_name):
         st.error(f"讀取分頁 [{sheet_name}] 失敗: {e}")
         return None
 
+# 🎯 修正重點：拿掉內部的 clear()，避免當前複習進度被強制洗牌
 def update_score_in_cloud(word, action, sheet_name):
     with st.spinner("正在同步修改雲端分數..."):
         try:
             res = requests.get(API_URL, params={"word": word, "action": action, "sheetName": sheet_name})
             if "Success" in res.text:
                 st.toast(f"✅ 雲端同步成功！")
-                st.cache_data.clear() 
+                # 🚫 這裡不再執行 st.cache_data.clear()，確保當前 index 順暢執行下去
             else:
                 st.error(f"雲端改分失敗: {res.text}")
         except Exception as e:
@@ -133,13 +134,12 @@ if df is not None:
     vocab_list = st.session_state.vocab_list
     current_idx = st.session_state.current_index
     
-    # 🎯 防呆機制：如果已經超過最後一個單字，顯示完成訊息並提供重來按鈕
+    # 防呆機制：全數複習完畢
     if current_idx >= len(vocab_list):
         st.success("🎉 太棒了！當前篩選條件下的單字已全數複習完畢！")
         if st.button("🔄 再複習一次", type="primary", use_container_width=True):
             st.session_state.current_index = 0
             st.session_state.show_definition = False
-            # 重新打散
             random.shuffle(st.session_state.vocab_list)
             st.session_state.vocab_list = sorted(st.session_state.vocab_list, key=lambda x: x['Score'])
             st.rerun()
@@ -149,7 +149,6 @@ if df is not None:
     target_word = str(current_vocab['Word']).strip()
     full_sentence = str(current_vocab['Sentence'])
     
-    # 正則表達式
     pattern = re.compile(rf'\b{re.escape(target_word)}\b', re.IGNORECASE)
     if not pattern.search(full_sentence):
         pattern = re.compile(re.escape(target_word), re.IGNORECASE)
@@ -171,7 +170,6 @@ if df is not None:
         else:
             st.markdown(f'<div class="sentence-container">{revealed_sentence_html}</div>', unsafe_allow_html=True)
 
-    # 🎯 動作控制：改分後自動切換到下一題的輔助函式
     def move_to_next():
         st.session_state.current_index += 1
         st.session_state.show_definition = False
@@ -182,20 +180,19 @@ if df is not None:
     with score_col1:
         if st.button("👍 Score+1", use_container_width=True):
             update_score_in_cloud(target_word, "up", selected_sheet)
-            move_to_next() # 🎯 自動跳下一單字
+            move_to_next()
             st.rerun()
     with score_col2:
         if st.button("👎 Score-1", use_container_width=True):
             update_score_in_cloud(target_word, "down", selected_sheet)
-            move_to_next() # 🎯 自動跳下一單字
+            move_to_next()
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 🎯 底部只保留翻轉按鈕，畫面極致乾淨！
     if st.button("🔄 翻轉", type="primary", use_container_width=True):
         st.session_state.show_definition = not st.session_state.show_definition
         st.rerun()
 
-    # 進度條（計算範圍安全調整）
+    # 進度條
     display_idx = min(current_idx + 1, len(vocab_list))
     st.progress(display_idx / len(vocab_list), text=f"進度: {display_idx} / {len(vocab_list)}")
