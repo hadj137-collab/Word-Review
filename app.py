@@ -89,7 +89,6 @@ if df is not None:
         if not st.session_state.show_definition:
             st.info(hidden_sentence)
             st.markdown(f"<p style='text-align: center; color: #FF4B4B; font-weight: bold; margin-top: 15px;'>當前單字 Score：{current_vocab['Score']}</p>", unsafe_allow_html=True)
-            # 💡 已移除下方的提示小字與分隔線
         else:
             st.markdown(f"<h1 style='text-align: center; color: #4A90E2;'>{target_word}</h1>", unsafe_allow_html=True)
             st.markdown(f"<p style='text-align: center; color: #888888;'>Score：{current_vocab['Score']}</p>", unsafe_allow_html=True)
@@ -97,7 +96,7 @@ if df is not None:
             st.write(f"**💡 完整句子：**")
             st.success(full_sentence)
 
-    # 調整分數按鈕（直接連動雲端）
+    # 調整分數按鈕（已調整為同一行左右並排）
     score_col1, score_col2 = st.columns(2)
     with score_col1:
         if st.button("👍 太簡單了！Score + 1", use_container_width=True):
