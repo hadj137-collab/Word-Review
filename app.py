@@ -91,7 +91,7 @@ if df is not None:
         
         with st.container(border=True):
             if not st.session_state.show_definition:
-                st.markdown("<h3 style='text-align: center; color: #888888;'>📝 請猜空格中的單字：</h3>", unsafe_allow_html=True)
+                st.markdown("<h3 style='text-align: center; color: #888888;'>猜猜空格中的單字</h3>", unsafe_allow_html=True)
                 st.info(hidden_sentence)
                 st.markdown(f"<p style='text-align: center; color: #888888; margin-top: 15px;'>Score：{current_vocab['Score']}</p>", unsafe_allow_html=True)
                 st.write("---")
