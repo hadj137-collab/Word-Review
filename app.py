@@ -7,18 +7,25 @@ import requests
 # === 🛠️ 頂部空間與排版精確優化 ===
 st.markdown("""
     <style>
-    /* 移除 Streamlit 頂部區塊多餘空白 */
+    /* 移除 Streamlit 頂部區塊多餘空白，並留出足夠高度避開工具列 */
     .block-container {
-        padding-top: 1.5rem !important;
+        padding-top: 3.5rem !important;
         padding-bottom: 1rem !important;
+    }
+    /* Streamlit 頂部工具列（Share/⭐/✏️/GitHub）會蓋住內容，讓它變透明且不占版面高度 */
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+        height: 2.5rem !important;
     }
     /* 精緻標題樣式：確保文字絕對不被切到 */
     .custom-title {
         font-size: 20px !important;
         font-weight: bold;
+        margin-top: 0.5rem !important;
         margin-bottom: 12px !important;
-        line-height: 1.5 !important;
+        line-height: 1.6 !important;
         color: #FFFFFF;
+        padding-top: 4px;
     }
     /* 🎯 修正：只有在特定的分數按鈕容器內，才強制左右並排 50% */
     .score-container [data-testid="column"] {
