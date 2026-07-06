@@ -9,7 +9,7 @@ st.markdown("""
     <style>
     /* 移除 Streamlit 頂部區塊多餘空白，並留出足夠高度避開工具列 */
     .block-container {
-        padding-top: 2.0rem !important;
+        padding-top: 1.8rem !important;
         padding-bottom: 0.5rem !important;
     }
     /* Streamlit 頂部工具列（Share/⭐/✏️/GitHub）會蓋住內容，讓它變透明且不占版面高度 */
@@ -48,7 +48,7 @@ st.markdown("""
     /* 縮小所有按鈕的上下內邊距與高度 */
     div.stButton > button {
         padding: 0.25rem 0.5rem !important;
-        min-height: 2.0rem !important;
+        min-height: 2.2rem !important;
         line-height: 1.2 !important;
     }
     /* 縮小 info/success 提示框的內邊距 */
@@ -62,9 +62,6 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-
-# 顯示例落大方的標題
-st.markdown('<p class="custom-title">單字複習APP</p>', unsafe_allow_html=True)
 
 # ===================================================
 # 🔗 請填入你的 Google 試算表 CSV 連結與你部署的 App Script 網址
