@@ -25,39 +25,26 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ===================================================
-# 🔗 雲端基本設定（請確保填入正確的 ID 與 API 網址）
+# 🔗 雲端基本設定
 # ===================================================
 GOOGLE_SHEET_ID = "1p4wj-mOuIDYFU81JAIwYOhDfVF5PPrDyidCtMLtowGs"
 API_URL = "https://script.google.com/macros/s/AKfycbz1bTWj2bNkGHiUI-enlG9kmTV8eioFv7Igl58d_Fso4Sxisd3MXGEr2T7Na7xGo_vt/exec" 
 
-# === 🎯 核心自動化：自動抓取 Google 試算表內的所有分頁名稱 ===
+# === 🎯 自動抓取所有分頁名稱 ===
 @st.cache_data(ttl=600)
 def fetch_all_sheet_names(sheet_id):
     try:
-        # 透過 Google Sheet 內建的表單結構 JSON 節點直接讀取結構資訊
-        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:json"
-        res = requests.get(url)
-        # 清洗掉 Google 回傳的垃圾前綴字串，解出標準 json
-        json_text = re.search(r'google\.visualization\.Query\.setResponse\((.*)\);', res.text).group(1)
-        
-        # 由於標準 tq 機制在某些共用設定下不方便直接拿分頁列表，我們改採最安全穩定的雲端導向讀取法：
-        # 如果上方解析遇到分頁限制，最直接快速的做法是使用公開資訊節點，或者以下方的例外處理作為基底。
-        # 這裡利用特殊網址結構直接解析全表單分頁名
         meta_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit"
         meta_res = requests.get(meta_url)
-        # 用正則表達式撈取 Google 埋在網頁源碼裡的 `sheetName` 陣列
         names = re.findall(r'"sheetName"\s*:\s*"([^"]+)"', meta_res.text)
-        
         if names:
-            # 去除重複項並保持原本排序
             seen = set()
             return [x for x in names if not (x in seen or seen.add(x))]
-        else:
-            return ["Sheet1"] # 萬一沒抓到，預設返回第一頁
+        return ["Sheet1"]
     except Exception:
         return ["Sheet1"]
 
-# === 核心邏輯：動態下載指定工作表資料 ===
+# === 動態下載指定工作表資料 ===
 @st.cache_data(ttl=600)
 def load_data_from_sheet(sheet_id, sheet_name):
     try:
@@ -87,7 +74,6 @@ def update_score_in_cloud(word, action, sheet_name):
 # === ⚙️ 側邊欄設定 ===
 st.sidebar.header("⚙️ 設定與功能")
 
-# 🎯 全自動化亮點：完全不需手動輸入，自動取得網路上該 Excel 表的所有最新分頁！
 available_sheets = fetch_all_sheet_names(GOOGLE_SHEET_ID)
 selected_sheet = st.sidebar.selectbox("請選擇要複習的分頁", options=available_sheets, index=0)
 
@@ -95,7 +81,7 @@ if st.sidebar.button("🔄 同步雲端最新單字"):
     st.cache_data.clear()
     st.rerun()
 
-# 讀取選定分頁的資料
+# 讀取資料
 df = load_data_from_sheet(GOOGLE_SHEET_ID, selected_sheet)
 
 if df is not None:
@@ -112,7 +98,7 @@ if df is not None:
         st.warning("⚠️ 目前選取的 Score 條件下沒有任何單字。")
         st.stop()
 
-    # 初始化排序邏輯（將 selected_sheet 加入 key，切換分頁時自動重新隨列出牌）
+    # 初始化排序邏輯
     state_key = f"vocab_drive_{selected_sheet}_{str(selected_scores)}"
     if st.session_state.get("current_state_key") != state_key:
         raw_list = filtered_df.to_dict(orient='records')
@@ -129,7 +115,7 @@ if df is not None:
     target_word = str(current_vocab['Word']).strip()
     full_sentence = str(current_vocab['Sentence'])
     
-    # 正則表達式匹配與首字母大小寫仿效
+    # 正則表達式
     pattern = re.compile(rf'\b{re.escape(target_word)}\b', re.IGNORECASE)
     if not pattern.search(full_sentence):
         pattern = re.compile(re.escape(target_word), re.IGNORECASE)
@@ -148,7 +134,7 @@ if df is not None:
         else:
             st.markdown(f'<div class="sentence-container">{revealed_sentence_html}</div>', unsafe_allow_html=True)
 
-    # 分數加減按鈕容器
+    # 分數加減按鈕
     st.markdown('<div class="score-container">', unsafe_allow_html=True)
     score_col1, score_col2 = st.columns(2, gap="small")
     with score_col1:
@@ -166,4 +152,20 @@ if df is not None:
     # 底部控制按鈕
     col1, col2, col3 = st.columns(3, gap="small")
     with col1:
-        if st.button("⬅️ 上一個",
+        if st.button("⬅️ 上一個", use_container_width=True):
+            if st.session_state.current_index > 0:
+                st.session_state.current_index -= 1
+                st.session_state.show_definition = False
+                st.rerun()
+    with col2:
+        if st.button("🔄 翻轉", type="primary", use_container_width=True):
+            st.session_state.show_definition = not st.session_state.show_definition
+            st.rerun()
+    with col3:
+        if st.button("下一個 ➡️", use_container_width=True):
+            if st.session_state.current_index < len(vocab_list) - 1:
+                st.session_state.current_index += 1
+                st.session_state.show_definition = False
+                st.rerun()
+
+    st.progress((current_idx + 1) / len(vocab_list), text=f"進度: {current_idx + 1} / {len(vocab_list)}")
