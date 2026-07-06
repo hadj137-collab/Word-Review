@@ -36,7 +36,6 @@ def fetch_all_sheet_names(api_url):
     try:
         res = requests.get(api_url, params={"action": "getSheets"})
         if res.status_code == 200 and res.text and "Error" not in res.text:
-            # 雲端會回傳像是 "Sheet1,進階單字,初級單字" 的字串，將其切開成陣列
             return [name.strip() for name in res.text.split(",")]
         return ["Sheet1"]
     except Exception:
@@ -72,7 +71,6 @@ def update_score_in_cloud(word, action, sheet_name):
 # === ⚙️ 側邊欄設定 ===
 st.sidebar.header("⚙️ 設定與功能")
 
-# 透過新 API 全自動抓取雲端實際的分頁
 available_sheets = fetch_all_sheet_names(API_URL)
 selected_sheet = st.sidebar.selectbox("請選擇要複習的分頁", options=available_sheets, index=0)
 
@@ -114,7 +112,7 @@ if df is not None:
     target_word = str(current_vocab['Word']).strip()
     full_sentence = str(current_vocab['Sentence'])
     
-    # 正則表達式
+    # 正則表達式與大小寫一致化
     pattern = re.compile(rf'\b{re.escape(target_word)}\b', re.IGNORECASE)
     if not pattern.search(full_sentence):
         pattern = re.compile(re.escape(target_word), re.IGNORECASE)
@@ -133,38 +131,36 @@ if df is not None:
         else:
             st.markdown(f'<div class="sentence-container">{revealed_sentence_html}</div>', unsafe_allow_html=True)
 
-    # 分數加減按鈕
+    # === 🎯 智慧改分與自動跳題核心邏輯 ===
+    def move_to_next():
+        """處理自動跳到下一個單字的輔助函式"""
+        if st.session_state.current_index < len(vocab_list) - 1:
+            st.session_state.current_index += 1
+        else:
+            st.session_state.current_index = 0  # 到底了就自動重頭開始
+            st.toast("🎉 太棒了！本輪篩選的單字已全部複習完畢，自動為您重新開始。")
+        st.session_state.show_definition = False
+
     st.markdown('<div class="score-container">', unsafe_allow_html=True)
     score_col1, score_col2 = st.columns(2, gap="small")
     with score_col1:
         if st.button("👍 Score+1", use_container_width=True):
             update_score_in_cloud(target_word, "up", selected_sheet)
             st.session_state.vocab_list[current_idx]['Score'] += 1
+            move_to_next()  # 🎯 改分完直接執行跳題
             st.rerun()
     with score_col2:
         if st.button("👎 Score-1", use_container_width=True):
             update_score_in_cloud(target_word, "down", selected_sheet)
             st.session_state.vocab_list[current_idx]['Score'] -= 1
+            move_to_next()  # 🎯 改分完直接執行跳題
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 底部控制按鈕
-    col1, col2, col3 = st.columns(3, gap="small")
-    with col1:
-        if st.button("⬅️ 上一個", use_container_width=True):
-            if st.session_state.current_index > 0:
-                st.session_state.current_index -= 1
-                st.session_state.show_definition = False
-                st.rerun()
-    with col2:
-        if st.button("🔄 翻轉", type="primary", use_container_width=True):
-            st.session_state.show_definition = not st.session_state.show_definition
-            st.rerun()
-    with col3:
-        if st.button("下一個 ➡️", use_container_width=True):
-            if st.session_state.current_index < len(vocab_list) - 1:
-                st.session_state.current_index += 1
-                st.session_state.show_definition = False
-                st.rerun()
+    # === 🔄 翻轉控制按鈕（已完全移除上一個/下一個） ===
+    if st.button("🔄 翻轉", type="primary", use_container_width=True):
+        st.session_state.show_definition = not st.session_state.show_definition
+        st.rerun()
 
+    # 進度條提示
     st.progress((current_idx + 1) / len(vocab_list), text=f"進度: {current_idx + 1} / {len(vocab_list)}")
