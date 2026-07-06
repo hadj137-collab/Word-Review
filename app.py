@@ -2,82 +2,77 @@ import streamlit as st
 import pandas as pd
 import random
 import re
+import requests  # 用來發送分數修改請求給 Google Drive
 
 # === 標題與側邊欄設定 ===
-st.title("📚 專屬 Excel 單字複習 App")
-st.caption("依 Score 由低到高排序（同分隨機打亂）＋ 例句自動挖空")
+st.title("📚 雲端同步單字複習 App")
+st.caption("依 Score 由低到高排序 ＋ 按鈕即時連動雲端試算表分數")
 
-# ==========================================
-# 🔗 你的專屬 Google 試算表 CSV 動態連結（已更新）
-# ==========================================
+# ===================================================
+# 🔗 請填入你的 Google 試算表 CSV 連結與剛剛部署的 App Script 網址
+# ===================================================
 GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1p4wj-mOuIDYFU81JAIwYOhDfVF5PPrDyidCtMLtowGs/export?format=csv"
+API_URL = "https://script.google.com/macros/s/這裡替換成你複製的網頁應用程式網址/exec" 
 
-# === 核心邏輯：自動從雲端下載 Excel/CSV 資料 ===
+# === 核心邏輯：自動從雲端下載資料 ===
 @st.cache_data(ttl=600)
 def load_data_from_drive(url):
     try:
         df = pd.read_csv(url)
         df.columns = df.columns.str.strip()
-        # 強制將 Score 轉為數字型態，避免排序時因為文字格式導致順序錯亂
         df['Score'] = pd.to_numeric(df['Score'], errors='coerce')
-        # 移除 Score 或 Word 欄位有空值的資料
         df = df.dropna(subset=['Word', 'Score'])
         return df
     except Exception as e:
-        st.error(f"連線至 Google Drive 失敗，請檢查網址。錯誤訊息: {e}")
+        st.error(f"連線至 Google Drive 失敗: {e}")
         return None
 
-# 執行自動讀取
 df = load_data_from_drive(GOOGLE_SHEET_CSV_URL)
 
+# 雲端同步改分函式
+def update_score_in_cloud(word, action):
+    with st.spinner("正在同步修改雲端分數..."):
+        try:
+            res = requests.get(API_URL, params={"word": word, "action": action})
+            if "Success" in res.text:
+                st.toast(f"✅ 雲端同步成功！單字 [{word}] 分數已變更。")
+                st.cache_data.clear() # 清除快取，讓下一次載入時抓到最新分數
+            else:
+                st.error(f"雲端改分失敗: {res.text}")
+        except Exception as e:
+            st.error(f"連線至雲端修改失敗: {e}")
+
 if df is not None:
-    # 檢查指定的英文欄位是否存在
     required_columns = ['Word', 'Sentence', 'Score']
     if not all(col in df.columns for col in required_columns):
-        st.error("❌ 雲端檔案欄位不符！您的試算表必須包含這三個欄位標題：'Word'、'Sentence'、'Score'")
+        st.error("❌ 雲端檔案欄位不符！")
         st.stop()
         
-    # 側邊欄：進階篩選與模式選擇
     st.sidebar.header("⚙️ 設定與功能")
-    
     if st.sidebar.button("🔄 同步雲端最新單字"):
         st.cache_data.clear()
         st.rerun()
 
     all_scores = sorted(df['Score'].unique().tolist())
-    selected_scores = st.sidebar.multiselect(
-        "1. 篩選你要複習的 Score 分數/級別", 
-        options=all_scores, 
-        default=all_scores
-    )
+    selected_scores = st.sidebar.multiselect("1. 篩選你要複習的 Score", options=all_scores, default=all_scores)
     
-    # 根據篩選過濾資料
     filtered_df = df[df['Score'].isin(selected_scores)]
-    
     if filtered_df.empty:
-        st.warning("⚠️ 目前選取的 Score 條件下沒有任何單字，請重新勾選。")
+        st.warning("⚠️ 目前選取的 Score 條件下沒有任何單字。")
         st.stop()
         
     mode = st.sidebar.radio("2. 請選擇模式", ["🃏 單字卡模式", "✍️ 填空測驗模式"])
 
-    # 狀態管理快取 Key
     state_key = f"vocab_drive_{str(selected_scores)}"
     if st.session_state.get("current_state_key") != state_key:
-        # --- 🧠 隨機與排序邏輯 ---
         raw_list = filtered_df.to_dict(orient='records')
-        # 全體隨機打亂，確保每次開啟 App 時，同分數的單字順序都是隨機的
         random.shuffle(raw_list)
-        # 根據 Score 由小到大排序（確保低分的先出現）
         st.session_state.vocab_list = sorted(raw_list, key=lambda x: x['Score'])
-        
         st.session_state.current_index = 0
         st.session_state.show_definition = False
-        
-        # 測驗狀態初始化（測驗模式也遵循同樣的低到高順序）
         st.session_state.quiz_current = 0
         st.session_state.selected_options = None
         st.session_state.has_submitted = False
-        
         st.session_state.current_state_key = state_key
 
     vocab_list = st.session_state.vocab_list
@@ -92,7 +87,6 @@ if df is not None:
         target_word = str(current_vocab['Word']).strip()
         full_sentence = str(current_vocab['Sentence'])
         
-        # 挖空邏輯
         pattern = re.compile(rf'\b{re.escape(target_word)}\b', re.IGNORECASE)
         if not pattern.search(full_sentence):
             pattern = re.compile(re.escape(target_word), re.IGNORECASE)
@@ -104,7 +98,6 @@ if df is not None:
                 st.info(hidden_sentence)
                 st.markdown(f"<p style='text-align: center; color: #FF4B4B; font-weight: bold; margin-top: 15px;'>當前單字 Score：{current_vocab['Score']}</p>", unsafe_allow_html=True)
                 st.write("---")
-                st.write("*(點擊下方按鈕查看答案單字)*")
             else:
                 st.markdown(f"<h1 style='text-align: center; color: #4A90E2;'>{target_word}</h1>", unsafe_allow_html=True)
                 st.markdown(f"<p style='text-align: center; color: #888888;'>Score：{current_vocab['Score']}</p>", unsafe_allow_html=True)
@@ -112,6 +105,23 @@ if df is not None:
                 st.write(f"**💡 完整句子：**")
                 st.success(full_sentence)
 
+        # 🔺 新增功能：調整分數按鈕 🔺
+        score_col1, score_col2 = st.columns(2)
+        with score_col1:
+            if st.button("👍 太簡單了！Score + 1", use_container_width=True):
+                update_score_in_cloud(target_word, "up")
+                # 即時更新本地狀態的分數
+                st.session_state.vocab_list[current_idx]['Score'] += 1
+                st.rerun()
+        with score_col2:
+            if st.button("👎 還不熟練...Score - 1", use_container_width=True):
+                update_score_in_cloud(target_word, "down")
+                st.session_state.vocab_list[current_idx]['Score'] -= 1
+                st.rerun()
+
+        st.write("") # 留空行
+
+        # 控制按鈕
         col1, col2, col3 = st.columns(3)
         with col1:
             if st.button("⬅️ 上一個", use_container_width=True):
@@ -137,11 +147,10 @@ if df is not None:
         st.header("🧠 智慧單字填空測驗")
         
         quiz_current = st.session_state.quiz_current
-        
         if quiz_current >= len(vocab_list):
             st.success("🎉 太厲害了！你已經答完全部的題目了！")
             if st.button("重新挑戰"):
-                st.session_state.current_state_key = "" # 清空 key 觸發重新隨機排序
+                st.session_state.current_state_key = ""
                 st.rerun()
             st.stop()
             
@@ -152,7 +161,6 @@ if df is not None:
         pattern = re.compile(rf'\b{re.escape(target_word)}\b', re.IGNORECASE)
         if not pattern.search(full_sentence):
             pattern = re.compile(re.escape(target_word), re.IGNORECASE)
-            
         hidden_sentence = pattern.sub(" `_______` ", full_sentence)
         
         st.subheader("📝 請選出最適合填入空格的單字：")
@@ -162,7 +170,6 @@ if df is not None:
         if st.session_state.selected_options is None or st.session_state.has_submitted == False:
             wrong_options = [str(v['Word']).strip() for v in vocab_list if str(v['Word']).strip() != target_word]
             wrong_options = list(set(wrong_options))
-            
             sample_size = min(3, len(wrong_options))
             quiz_options = random.sample(wrong_options, sample_size) + [target_word]
             random.shuffle(quiz_options)
@@ -183,8 +190,20 @@ if df is not None:
                 st.success("🎉 答對了！非常完美！")
             else:
                 st.error(f"❌ 答錯了！正確答案應該是：**{target_word}**")
-            
             st.markdown(f"**完整正確句子 (Sentence)：**\n> {full_sentence}")
+            
+            # 🔺 新增功能：測驗模式下也可以一鍵加減雲端分數 🔺
+            quiz_score_col1, quiz_score_col2 = st.columns(2)
+            with quiz_score_col1:
+                if st.button("👍 太簡單了！Score + 1", key=f"qup_{quiz_current}"):
+                    update_score_in_cloud(target_word, "up")
+                    correct_vocab['Score'] += 1
+                    st.rerun()
+            with quiz_score_col2:
+                if st.button("👎 還不熟練...Score - 1", key=f"qdown_{quiz_current}"):
+                    update_score_in_cloud(target_word, "down")
+                    correct_vocab['Score'] -= 1
+                    st.rerun()
                     
             with col2:
                 if st.button("下一題 ➡️", use_container_width=True):
@@ -192,3 +211,4 @@ if df is not None:
                     st.session_state.has_submitted = False
                     st.session_state.selected_options = None
                     st.rerun()
+                    
