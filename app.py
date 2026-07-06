@@ -30,16 +30,14 @@ st.markdown("""
 GOOGLE_SHEET_ID = "1p4wj-mOuIDYFU81JAIwYOhDfVF5PPrDyidCtMLtowGs"
 API_URL = "https://script.google.com/macros/s/AKfycbz1bTWj2bNkGHiUI-enlG9kmTV8eioFv7Igl58d_Fso4Sxisd3MXGEr2T7Na7xGo_vt/exec" 
 
-# === 🎯 自動抓取所有分頁名稱 ===
+# === 🎯 透過 API 撈取所有分頁名稱 ===
 @st.cache_data(ttl=600)
-def fetch_all_sheet_names(sheet_id):
+def fetch_all_sheet_names(api_url):
     try:
-        meta_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit"
-        meta_res = requests.get(meta_url)
-        names = re.findall(r'"sheetName"\s*:\s*"([^"]+)"', meta_res.text)
-        if names:
-            seen = set()
-            return [x for x in names if not (x in seen or seen.add(x))]
+        res = requests.get(api_url, params={"action": "getSheets"})
+        if res.status_code == 200 and res.text and "Error" not in res.text:
+            # 雲端會回傳像是 "Sheet1,進階單字,初級單字" 的字串，將其切開成陣列
+            return [name.strip() for name in res.text.split(",")]
         return ["Sheet1"]
     except Exception:
         return ["Sheet1"]
@@ -74,7 +72,8 @@ def update_score_in_cloud(word, action, sheet_name):
 # === ⚙️ 側邊欄設定 ===
 st.sidebar.header("⚙️ 設定與功能")
 
-available_sheets = fetch_all_sheet_names(GOOGLE_SHEET_ID)
+# 透過新 API 全自動抓取雲端實際的分頁
+available_sheets = fetch_all_sheet_names(API_URL)
 selected_sheet = st.sidebar.selectbox("請選擇要複習的分頁", options=available_sheets, index=0)
 
 if st.sidebar.button("🔄 同步雲端最新單字"):
