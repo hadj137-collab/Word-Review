@@ -129,27 +129,25 @@ if df is not None:
     target_word = str(current_vocab['Word']).strip()
     full_sentence = str(current_vocab['Sentence'])
     
-    # === 智慧替換邏輯（正向挖空與翻轉嵌入） ===
-    # 用正則表達式尋找句子中的單字（考慮邊界與大小寫）
+    # === 智慧替換與正則表達式優化 ===
     pattern = re.compile(rf'\b{re.escape(target_word)}\b', re.IGNORECASE)
     if not pattern.search(full_sentence):
         pattern = re.compile(re.escape(target_word), re.IGNORECASE)
         
-    # 未翻轉前：把單字變成空格
+    # 未翻轉前：維持原本清爽的底色空格
     hidden_sentence = pattern.sub(" `_______` ", full_sentence)
     
-    # 🎯 核心改動：按下翻轉時，把單字用醒目的高亮樣式直接嵌入在原句子裡
-    highlighted_word = f"**` {target_word} `**"
-    revealed_sentence = pattern.sub(highlighted_word, full_sentence)
+    # 🎯 核心優化：翻轉後，將單字放大至 22px、加粗（bold）、並設定醒目的深海藍/淺藍高亮，且前後留出適當間距
+    highlighted_html = f'<span style="font-size: 22px; font-weight: bold; color: #5294e2; background-color: rgba(82, 148, 226, 0.15); padding: 2px 8px; border-radius: 4px; margin: 0 4px;">{target_word}</span>'
+    revealed_sentence_html = pattern.sub(highlighted_html, full_sentence)
     
     # === 顯示單字卡內容 ===
     with st.container(height=180, border=True):
         if not st.session_state.show_definition:
-            # 未翻轉時：顯示挖空句
             st.info(hidden_sentence)
         else:
-            # 🎯 翻轉後：不顯示獨立的大單字，直接顯示帶有高亮正確答案的完整句子！
-            st.success(revealed_sentence)
+            # 🎯 使用 markdown 渲染包含自訂 CSS 放大樣式的正確答案句子
+            st.markdown(f'<div style="color: #ffffff; line-height: 1.6;">{revealed_sentence_html}</div>', unsafe_allow_html=True)
 
     # 🛠️ 使用客製化容器包裹，確保左右並排的網頁底層死指令只適用於這兩個加減分按鈕
     st.markdown('<div class="score-container">', unsafe_allow_html=True)
