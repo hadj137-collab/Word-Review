@@ -28,7 +28,7 @@ st.markdown("""
 # 🔗 雲端基本設定（請確保填入正確的 ID 與 API 網址）
 # ===================================================
 GOOGLE_SHEET_ID = "1p4wj-mOuIDYFU81JAIwYOhDfVF5PPrDyidCtMLtowGs"
-API_URL = "https://script.google.com/macros/s/AKfycbwrsmtA9J308YWT0DhxI9Qn57nza7kOICzzfL5T6rEnHN1VrB-dUlKKzxR9zvKIG-p1/exec" 
+API_URL = "https://script.google.com/macros/s/AKfycbz1bTWj2bNkGHiUI-enlG9kmTV8eioFv7Igl58d_Fso4Sxisd3MXGEr2T7Na7xGo_vt/exec" 
 
 # === 🎯 核心自動化：自動抓取 Google 試算表內的所有分頁名稱 ===
 @st.cache_data(ttl=600)
