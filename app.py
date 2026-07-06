@@ -4,7 +4,7 @@ import random
 import re
 import requests
 
-# === 🛠️ 頂部空間與排版精確優化（徹底解決翻轉跳行問題） ===
+# === 🛠️ 頂部空間與排版精確優化 ===
 st.markdown("""
     <style>
     .block-container { padding-top: 2.5rem !important; padding-bottom: 0.5rem !important; }
@@ -19,7 +19,6 @@ st.markdown("""
     div.stButton > button { padding: 0.25rem 0.5rem !important; min-height: 2.2rem !important; line-height: 1.2 !important; }
     div[data-testid="stProgress"] { margin-top: 0 !important; margin-bottom: 0 !important; }
     
-    /* 🎯 句子容器：允許文字在正常邊界內自然換行 */
     .sentence-container { 
         color: #ffffff !important; 
         font-size: 17px !important; 
@@ -29,7 +28,6 @@ st.markdown("""
         word-break: break-word !important;
     }
     
-    /* 🎯 正面未翻轉的動態等長空白框 */
     .blank-placeholder { 
         font-size: 20px !important; 
         font-weight: bold !important; 
@@ -39,10 +37,9 @@ st.markdown("""
         border-radius: 4px !important; 
         margin: 0 2px !important; 
         display: inline !important;
-        white-space: pre !important; /* 確保空格或底線不會被瀏覽器壓縮 */
+        white-space: pre !important;
     }
     
-    /* 🎯 反面翻轉後的高亮單字：與正面框框大小、邊距完美對齊 */
     .highlight-word { 
         font-size: 20px !important; 
         font-weight: bold !important; 
@@ -61,7 +58,7 @@ st.markdown("""
 # 🔗 雲端基本設定
 # ===================================================
 GOOGLE_SHEET_ID = "1p4wj-mOuIDYFU81JAIwYOhDfVF5PPrDyidCtMLtowGs"
-API_URL = "https://script.google.com/macros/s/AKfycbwrsmtA9J308YWT0DhxI9Qn57nza7kOICzzfL5T6rEnHN1VrB-dUlKKzxR9zvKIG-p1/exec" 
+API_URL = "https://script.google.com/macros/s/AKfycbz1bTWj2bNkGHiUI-enlG9kmTV8eioFv7Igl58d_Fso4Sxisd3MXGEr2T7Na7xGo_vt/exec" 
 
 @st.cache_data(ttl=600)
 def fetch_all_sheet_names(api_url):
@@ -91,7 +88,7 @@ def update_score_in_cloud(word, action, sheet_name):
         try:
             res = requests.get(API_URL, params={"word": word, "action": action, "sheetName": sheet_name})
             if "Success" in res.text:
-                st.toast(f"✅ 雲端同步成功！[{sheet_name}] 的單字 [{word}] 分數已變更。")
+                st.toast(f"✅ 雲端同步成功！")
                 st.cache_data.clear() 
             else:
                 st.error(f"雲端改分失敗: {res.text}")
@@ -113,7 +110,7 @@ df = load_data_from_sheet(GOOGLE_SHEET_ID, selected_sheet)
 if df is not None:
     required_columns = ['Word', 'Sentence', 'Score']
     if not all(col in df.columns for col in required_columns):
-        st.error(f"❌ 雲端欄位不符！分頁 '{selected_sheet}' 必須包含：'Word'、'Sentence'、'Score'")
+        st.error(f"❌ 雲端欄位不符！")
         st.stop()
 
     all_scores = sorted(df['Score'].unique().tolist())
@@ -135,22 +132,31 @@ if df is not None:
 
     vocab_list = st.session_state.vocab_list
     current_idx = st.session_state.current_index
-    current_vocab = vocab_list[current_idx]
     
+    # 🎯 防呆機制：如果已經超過最後一個單字，顯示完成訊息並提供重來按鈕
+    if current_idx >= len(vocab_list):
+        st.success("🎉 太棒了！當前篩選條件下的單字已全數複習完畢！")
+        if st.button("🔄 再複習一次", type="primary", use_container_width=True):
+            st.session_state.current_index = 0
+            st.session_state.show_definition = False
+            # 重新打散
+            random.shuffle(st.session_state.vocab_list)
+            st.session_state.vocab_list = sorted(st.session_state.vocab_list, key=lambda x: x['Score'])
+            st.rerun()
+        st.stop()
+
+    current_vocab = vocab_list[current_idx]
     target_word = str(current_vocab['Word']).strip()
     full_sentence = str(current_vocab['Sentence'])
     
-    # 正則表達式精確匹配
+    # 正則表達式
     pattern = re.compile(rf'\b{re.escape(target_word)}\b', re.IGNORECASE)
     if not pattern.search(full_sentence):
         pattern = re.compile(re.escape(target_word), re.IGNORECASE)
         
-    # 🎯 核心修正：讓正面空白框的底線長度「等於單字實際長度」！
-    # 這樣正面預留的空間就和反面一模一樣，絕對不會造成排版二次跳行
     def make_dynamic_blank(match):
         word_len = len(match.group(0))
-        dynamic_underlines = "_" * max(word_len, 5) # 至少保持5個底線美觀度
-        return f'<span class="blank-placeholder">{dynamic_underlines}</span>'
+        return f'<span class="blank-placeholder">{"_" * max(word_len, 5)}</span>'
         
     hidden_sentence_html = pattern.sub(make_dynamic_blank, full_sentence)
     
@@ -165,38 +171,31 @@ if df is not None:
         else:
             st.markdown(f'<div class="sentence-container">{revealed_sentence_html}</div>', unsafe_allow_html=True)
 
+    # 🎯 動作控制：改分後自動切換到下一題的輔助函式
+    def move_to_next():
+        st.session_state.current_index += 1
+        st.session_state.show_definition = False
+
     # 分數加減按鈕
     st.markdown('<div class="score-container">', unsafe_allow_html=True)
     score_col1, score_col2 = st.columns(2, gap="small")
     with score_col1:
         if st.button("👍 Score+1", use_container_width=True):
             update_score_in_cloud(target_word, "up", selected_sheet)
-            st.session_state.vocab_list[current_idx]['Score'] += 1
+            move_to_next() # 🎯 自動跳下一單字
             st.rerun()
     with score_col2:
         if st.button("👎 Score-1", use_container_width=True):
             update_score_in_cloud(target_word, "down", selected_sheet)
-            st.session_state.vocab_list[current_idx]['Score'] -= 1
+            move_to_next() # 🎯 自動跳下一單字
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 底部控制按鈕
-    col1, col2, col3 = st.columns(3, gap="small")
-    with col1:
-        if st.button("⬅️ 上一個", use_container_width=True):
-            if st.session_state.current_index > 0:
-                st.session_state.current_index -= 1
-                st.session_state.show_definition = False
-                st.rerun()
-    with col2:
-        if st.button("🔄 翻轉", type="primary", use_container_width=True):
-            st.session_state.show_definition = not st.session_state.show_definition
-            st.rerun()
-    with col3:
-        if st.button("下一個 ➡️", use_container_width=True):
-            if st.session_state.current_index < len(vocab_list) - 1:
-                st.session_state.current_index += 1
-                st.session_state.show_definition = False
-                st.rerun()
+    # 🎯 底部只保留翻轉按鈕，畫面極致乾淨！
+    if st.button("🔄 翻轉", type="primary", use_container_width=True):
+        st.session_state.show_definition = not st.session_state.show_definition
+        st.rerun()
 
-    st.progress((current_idx + 1) / len(vocab_list), text=f"進度: {current_idx + 1} / {len(vocab_list)}")
+    # 進度條（計算範圍安全調整）
+    display_idx = min(current_idx + 1, len(vocab_list))
+    st.progress(display_idx / len(vocab_list), text=f"進度: {display_idx} / {len(vocab_list)}")
