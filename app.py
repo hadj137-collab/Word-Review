@@ -6,7 +6,7 @@ import re
 # ==========================================
 # 📌 請在此處貼上你從 Google 試算表發布取得的 CSV 網址
 # ==========================================
-GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/XXXXXXXXX/pub?output=csv"
+GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1p4wj-mOuIDYFU81JAIwYOhDfVF5PPrDyidCtMLtowGs/edit?usp=drivesdk"
 
 # === 標題設定 ===
 st.title("📚 雲端同步英文單字複習 App")
