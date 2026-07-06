@@ -93,7 +93,7 @@ st.markdown("""
 # 🔗 請填入你的 Google 試算表 CSV 連結與你部署的 App Script 網址
 # ===================================================
 GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1p4wj-mOuIDYFU81JAIwYOhDfVF5PPrDyidCtMLtowGs/export?format=csv"
-API_URL = "https://script.google.com/macros/s/AKfycbwrsmtA9J308YWT0DhxI9Qn57nza7kOICzzfL5T6rEnHN1VrB-dUlKKzxR9zvKIG-p1/exec" 
+API_URL = "https://script.google.com/macros/s/AKfycbz1bTWj2bNkGHiUI-enlG9kmTV8eioFv7Igl58d_Fso4Sxisd3MXGEr2T7Na7xGo_vt/exec" 
 
 # === 核心邏輯：自動從雲端下載資料 ===
 @st.cache_data(ttl=600)
