@@ -5,8 +5,8 @@ import re
 import requests
 
 # === 標題設定 ===
-st.title("📚 雲端同步單字複習 App")
-st.caption("依 Score 由低到高排序（同分隨機） ＋ 例句智慧挖空卡")
+# 💡 已移除書本圖示與副標題，保持最乾淨的介面
+st.title("單字複習APP")
 
 # ===================================================
 # 🔗 請填入你的 Google 試算表 CSV 連結與你部署的 App Script 網址
@@ -88,7 +88,6 @@ if df is not None:
     # === 顯示單字卡內容 ===
     with st.container(border=True):
         if not st.session_state.show_definition:
-            # 💡 已移除原先的提示標頭，直接顯示例句題目
             st.info(hidden_sentence)
             st.markdown(f"<p style='text-align: center; color: #FF4B4B; font-weight: bold; margin-top: 15px;'>當前單字 Score：{current_vocab['Score']}</p>", unsafe_allow_html=True)
             st.write("---")
