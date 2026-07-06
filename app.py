@@ -4,7 +4,7 @@ import random
 import re
 import requests
 
-# === 🛠️ 頂部空間與排版精確優化 ===
+# === 🛠️ 頂部空間與排版精確優化（已修復跳行問題） ===
 st.markdown("""
     <style>
     .block-container { padding-top: 2.5rem !important; padding-bottom: 0.5rem !important; }
@@ -18,9 +18,42 @@ st.markdown("""
     [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlock"] { justify-content: center !important; height: 100% !important; }
     div.stButton > button { padding: 0.25rem 0.5rem !important; min-height: 2.2rem !important; line-height: 1.2 !important; }
     div[data-testid="stProgress"] { margin-top: 0 !important; margin-bottom: 0 !important; }
-    .sentence-container { color: #ffffff !important; font-size: 17px !important; line-height: 1.8 !important; text-align: left !important; padding: 5px 10px !important; display: inline-block !important; vertical-align: middle !important; }
-    .blank-placeholder { font-size: 22px !important; font-weight: bold !important; color: #888888 !important; background-color: rgba(255, 255, 255, 0.08) !important; padding: 2px 8px !important; border-radius: 4px !important; margin: 0 4px !important; display: inline-block !important; vertical-align: middle !important; }
-    .highlight-word { font-size: 22px !important; font-weight: bold !important; color: #5294e2 !important; background-color: rgba(82, 148, 226, 0.15) !important; padding: 2px 8px !important; border-radius: 4px !important; margin: 0 4px !important; display: inline-block !important; vertical-align: middle !important; }
+    
+    /* 🎯 句子容器：允許文字在正常邊界內自然換行 */
+    .sentence-container { 
+        color: #ffffff !important; 
+        font-size: 17px !important; 
+        line-height: 1.8 !important; 
+        text-align: left !important; 
+        padding: 5px 10px !important; 
+        word-break: break-word !important;
+    }
+    
+    /* 🎯 正面未翻轉的空白框樣式 */
+    .blank-placeholder { 
+        font-size: 22px !important; 
+        font-weight: bold !important; 
+        color: #888888 !important; 
+        background-color: rgba(255, 255, 255, 0.08) !important; 
+        padding: 0px 6px !important; 
+        border-radius: 4px !important; 
+        margin: 0 4px !important; 
+        display: inline-block !important; 
+        vertical-align: middle !important;
+    }
+    
+    /* 🎯 反面翻轉後的高亮單字：改為 inline 確保完美融入句子，絕不亂跳行 */
+    .highlight-word { 
+        font-size: 20px !important; 
+        font-weight: bold !important; 
+        color: #5294e2 !important; 
+        background-color: rgba(82, 148, 226, 0.18) !important; 
+        padding: 2px 6px !important; 
+        border-radius: 4px !important; 
+        margin: 0 2px !important; 
+        display: inline !important; 
+        white-space: normal !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -28,9 +61,9 @@ st.markdown("""
 # 🔗 雲端基本設定
 # ===================================================
 GOOGLE_SHEET_ID = "1p4wj-mOuIDYFU81JAIwYOhDfVF5PPrDyidCtMLtowGs"
-API_URL = "https://script.google.com/macros/s/AKfycbz1bTWj2bNkGHiUI-enlG9kmTV8eioFv7Igl58d_Fso4Sxisd3MXGEr2T7Na7xGo_vt/exec" 
+API_URL = "https://script.google.com/macros/s/AKfycbwrsmtA9J308YWT0DhxI9Qn57nza7kOICzzfL5T6rEnHN1VrB-dUlKKzxR9zvKIG-p1/exec" 
 
-# === 🎯 透過 API 撈取所有分頁名稱 ===
+# === 透過 API 撈取所有分頁名稱 ===
 @st.cache_data(ttl=600)
 def fetch_all_sheet_names(api_url):
     try:
@@ -112,7 +145,7 @@ if df is not None:
     target_word = str(current_vocab['Word']).strip()
     full_sentence = str(current_vocab['Sentence'])
     
-    # 正則表達式與大小寫一致化
+    # 正則表達式
     pattern = re.compile(rf'\b{re.escape(target_word)}\b', re.IGNORECASE)
     if not pattern.search(full_sentence):
         pattern = re.compile(re.escape(target_word), re.IGNORECASE)
@@ -131,36 +164,38 @@ if df is not None:
         else:
             st.markdown(f'<div class="sentence-container">{revealed_sentence_html}</div>', unsafe_allow_html=True)
 
-    # === 🎯 智慧改分與自動跳題核心邏輯 ===
-    def move_to_next():
-        """處理自動跳到下一個單字的輔助函式"""
-        if st.session_state.current_index < len(vocab_list) - 1:
-            st.session_state.current_index += 1
-        else:
-            st.session_state.current_index = 0  # 到底了就自動重頭開始
-            st.toast("🎉 太棒了！本輪篩選的單字已全部複習完畢，自動為您重新開始。")
-        st.session_state.show_definition = False
-
+    # 分數加減按鈕
     st.markdown('<div class="score-container">', unsafe_allow_html=True)
     score_col1, score_col2 = st.columns(2, gap="small")
     with score_col1:
         if st.button("👍 Score+1", use_container_width=True):
             update_score_in_cloud(target_word, "up", selected_sheet)
             st.session_state.vocab_list[current_idx]['Score'] += 1
-            move_to_next()  # 🎯 改分完直接執行跳題
             st.rerun()
     with score_col2:
         if st.button("👎 Score-1", use_container_width=True):
             update_score_in_cloud(target_word, "down", selected_sheet)
             st.session_state.vocab_list[current_idx]['Score'] -= 1
-            move_to_next()  # 🎯 改分完直接執行跳題
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # === 🔄 翻轉控制按鈕（已完全移除上一個/下一個） ===
-    if st.button("🔄 翻轉", type="primary", use_container_width=True):
-        st.session_state.show_definition = not st.session_state.show_definition
-        st.rerun()
+    # 底部控制按鈕
+    col1, col2, col3 = st.columns(3, gap="small")
+    with col1:
+        if st.button("⬅️ 上一個", use_container_width=True):
+            if st.session_state.current_index > 0:
+                st.session_state.current_index -= 1
+                st.session_state.show_definition = False
+                st.rerun()
+    with col2:
+        if st.button("🔄 翻轉", type="primary", use_container_width=True):
+            st.session_state.show_definition = not st.session_state.show_definition
+            st.rerun()
+    with col3:
+        if st.button("下一個 ➡️", use_container_width=True):
+            if st.session_state.current_index < len(vocab_list) - 1:
+                st.session_state.current_index += 1
+                st.session_state.show_definition = False
+                st.rerun()
 
-    # 進度條提示
     st.progress((current_idx + 1) / len(vocab_list), text=f"進度: {current_idx + 1} / {len(vocab_list)}")
