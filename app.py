@@ -4,7 +4,7 @@ import random
 import re
 import requests
 
-# === 🛠️ 頂部空間與排版精確優化（徹底拔除 Block 元素，強制全 inline 渲染） ===
+# === 🛠️ 頂部空間與排版精確優化（徹底解決翻轉跳行問題） ===
 st.markdown("""
     <style>
     .block-container { padding-top: 2.5rem !important; padding-bottom: 0.5rem !important; }
@@ -19,38 +19,40 @@ st.markdown("""
     div.stButton > button { padding: 0.25rem 0.5rem !important; min-height: 2.2rem !important; line-height: 1.2 !important; }
     div[data-testid="stProgress"] { margin-top: 0 !important; margin-bottom: 0 !important; }
     
-    /* 🎯 句子容器：純文字流排版，不允許內部有任何塊級分隔 */
+    /* 🎯 句子容器：允許文字在正常邊界內自然換行 */
     .sentence-container { 
         color: #ffffff !important; 
-        font-size: 18px !important; 
-        line-height: 1.6 !important; 
+        font-size: 17px !important; 
+        line-height: 1.8 !important; 
         text-align: left !important; 
         padding: 5px 10px !important; 
-        display: block !important;
-        word-wrap: break-word !important;
+        word-break: break-word !important;
     }
     
-    /* 🎯 正面未翻轉的空白框樣式：改成 inline-block 緊跟文字 */
+    /* 🎯 正面未翻轉的動態等長空白框 */
     .blank-placeholder { 
-        font-size: 18px !important; 
+        font-size: 20px !important; 
         font-weight: bold !important; 
         color: #888888 !important; 
-        background-color: rgba(255, 255, 255, 0.12) !important; 
-        padding: 0px 6px !important; 
+        background-color: rgba(255, 255, 255, 0.08) !important; 
+        padding: 2px 6px !important; 
         border-radius: 4px !important; 
-        display: inline-block !important; 
-        vertical-align: baseline !important;
+        margin: 0 2px !important; 
+        display: inline !important;
+        white-space: pre !important; /* 確保空格或底線不會被瀏覽器壓縮 */
     }
     
-    /* 🎯 反面翻轉後的高亮單字：徹底扁平化，當作普通單字塞在句子裡，絕不跳行 */
+    /* 🎯 反面翻轉後的高亮單字：與正面框框大小、邊距完美對齊 */
     .highlight-word { 
-        font-size: 18px !important; 
+        font-size: 20px !important; 
         font-weight: bold !important; 
         color: #5294e2 !important; 
         background-color: rgba(82, 148, 226, 0.18) !important; 
-        padding: 2px 4px !important; 
+        padding: 2px 6px !important; 
         border-radius: 4px !important; 
+        margin: 0 2px !important; 
         display: inline !important; 
+        white-space: normal !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -61,7 +63,6 @@ st.markdown("""
 GOOGLE_SHEET_ID = "1p4wj-mOuIDYFU81JAIwYOhDfVF5PPrDyidCtMLtowGs"
 API_URL = "https://script.google.com/macros/s/AKfycbwrsmtA9J308YWT0DhxI9Qn57nza7kOICzzfL5T6rEnHN1VrB-dUlKKzxR9zvKIG-p1/exec" 
 
-# === 透過 API 撈取所有分頁名稱 ===
 @st.cache_data(ttl=600)
 def fetch_all_sheet_names(api_url):
     try:
@@ -72,7 +73,6 @@ def fetch_all_sheet_names(api_url):
     except Exception:
         return ["Sheet1"]
 
-# === 動態下載指定工作表資料 ===
 @st.cache_data(ttl=600)
 def load_data_from_sheet(sheet_id, sheet_name):
     try:
@@ -86,7 +86,6 @@ def load_data_from_sheet(sheet_id, sheet_name):
         st.error(f"讀取分頁 [{sheet_name}] 失敗: {e}")
         return None
 
-# 雲端同步改分函式
 def update_score_in_cloud(word, action, sheet_name):
     with st.spinner("正在同步修改雲端分數..."):
         try:
@@ -109,7 +108,6 @@ if st.sidebar.button("🔄 同步雲端最新單字"):
     st.cache_data.clear()
     st.rerun()
 
-# 讀取資料
 df = load_data_from_sheet(GOOGLE_SHEET_ID, selected_sheet)
 
 if df is not None:
@@ -126,7 +124,6 @@ if df is not None:
         st.warning("⚠️ 目前選取的 Score 條件下沒有任何單字。")
         st.stop()
 
-    # 初始化排序邏輯
     state_key = f"vocab_drive_{selected_sheet}_{str(selected_scores)}"
     if st.session_state.get("current_state_key") != state_key:
         raw_list = filtered_df.to_dict(orient='records')
@@ -140,20 +137,25 @@ if df is not None:
     current_idx = st.session_state.current_index
     current_vocab = vocab_list[current_idx]
     
-    # 確保前後多餘空格完全被剔除
     target_word = str(current_vocab['Word']).strip()
-    full_sentence = str(current_vocab['Sentence']).strip()
+    full_sentence = str(current_vocab['Sentence'])
     
-    # 🎯 終極優化：改用「寬鬆邊界正則匹配」，不論前後是空格、標點還是直接連著，都能精準捕捉
-    pattern = re.compile(re.escape(target_word), re.IGNORECASE)
+    # 正則表達式精確匹配
+    pattern = re.compile(rf'\b{re.escape(target_word)}\b', re.IGNORECASE)
+    if not pattern.search(full_sentence):
+        pattern = re.compile(re.escape(target_word), re.IGNORECASE)
         
-    blank_html = '<span class="blank-placeholder">&nbsp;_______&nbsp;</span>'
-    hidden_sentence_html = pattern.sub(blank_html, full_sentence)
+    # 🎯 核心修正：讓正面空白框的底線長度「等於單字實際長度」！
+    # 這樣正面預留的空間就和反面一模一樣，絕對不會造成排版二次跳行
+    def make_dynamic_blank(match):
+        word_len = len(match.group(0))
+        dynamic_underlines = "_" * max(word_len, 5) # 至少保持5個底線美觀度
+        return f'<span class="blank-placeholder">{dynamic_underlines}</span>'
+        
+    hidden_sentence_html = pattern.sub(make_dynamic_blank, full_sentence)
     
     def make_highlight(match):
-        # 保持原句子的大小寫，同時包覆在純 inline 標籤中
         return f'<span class="highlight-word">{match.group(0)}</span>'
-        
     revealed_sentence_html = pattern.sub(make_highlight, full_sentence)
     
     # 顯示字卡
