@@ -4,7 +4,7 @@ import random
 import re
 import requests
 
-# === 🛠️ 頂部空間與排版精確優化（已修復跳行問題） ===
+# === 🛠️ 頂部空間與排版精確優化（徹底拔除 Block 元素，強制全 inline 渲染） ===
 st.markdown("""
     <style>
     .block-container { padding-top: 2.5rem !important; padding-bottom: 0.5rem !important; }
@@ -19,40 +19,38 @@ st.markdown("""
     div.stButton > button { padding: 0.25rem 0.5rem !important; min-height: 2.2rem !important; line-height: 1.2 !important; }
     div[data-testid="stProgress"] { margin-top: 0 !important; margin-bottom: 0 !important; }
     
-    /* 🎯 句子容器：允許文字在正常邊界內自然換行 */
+    /* 🎯 句子容器：純文字流排版，不允許內部有任何塊級分隔 */
     .sentence-container { 
         color: #ffffff !important; 
-        font-size: 17px !important; 
-        line-height: 1.8 !important; 
+        font-size: 18px !important; 
+        line-height: 1.6 !important; 
         text-align: left !important; 
         padding: 5px 10px !important; 
-        word-break: break-word !important;
+        display: block !important;
+        word-wrap: break-word !important;
     }
     
-    /* 🎯 正面未翻轉的空白框樣式 */
+    /* 🎯 正面未翻轉的空白框樣式：改成 inline-block 緊跟文字 */
     .blank-placeholder { 
-        font-size: 22px !important; 
+        font-size: 18px !important; 
         font-weight: bold !important; 
         color: #888888 !important; 
-        background-color: rgba(255, 255, 255, 0.08) !important; 
+        background-color: rgba(255, 255, 255, 0.12) !important; 
         padding: 0px 6px !important; 
         border-radius: 4px !important; 
-        margin: 0 4px !important; 
         display: inline-block !important; 
-        vertical-align: middle !important;
+        vertical-align: baseline !important;
     }
     
-    /* 🎯 反面翻轉後的高亮單字：改為 inline 確保完美融入句子，絕不亂跳行 */
+    /* 🎯 反面翻轉後的高亮單字：徹底扁平化，當作普通單字塞在句子裡，絕不跳行 */
     .highlight-word { 
-        font-size: 20px !important; 
+        font-size: 18px !important; 
         font-weight: bold !important; 
         color: #5294e2 !important; 
         background-color: rgba(82, 148, 226, 0.18) !important; 
-        padding: 2px 6px !important; 
+        padding: 2px 4px !important; 
         border-radius: 4px !important; 
-        margin: 0 2px !important; 
         display: inline !important; 
-        white-space: normal !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -142,19 +140,20 @@ if df is not None:
     current_idx = st.session_state.current_index
     current_vocab = vocab_list[current_idx]
     
+    # 確保前後多餘空格完全被剔除
     target_word = str(current_vocab['Word']).strip()
-    full_sentence = str(current_vocab['Sentence'])
+    full_sentence = str(current_vocab['Sentence']).strip()
     
-    # 正則表達式
-    pattern = re.compile(rf'\b{re.escape(target_word)}\b', re.IGNORECASE)
-    if not pattern.search(full_sentence):
-        pattern = re.compile(re.escape(target_word), re.IGNORECASE)
+    # 🎯 終極優化：改用「寬鬆邊界正則匹配」，不論前後是空格、標點還是直接連著，都能精準捕捉
+    pattern = re.compile(re.escape(target_word), re.IGNORECASE)
         
-    blank_html = '<span class="blank-placeholder">_______</span>'
+    blank_html = '<span class="blank-placeholder">&nbsp;_______&nbsp;</span>'
     hidden_sentence_html = pattern.sub(blank_html, full_sentence)
     
     def make_highlight(match):
+        # 保持原句子的大小寫，同時包覆在純 inline 標籤中
         return f'<span class="highlight-word">{match.group(0)}</span>'
+        
     revealed_sentence_html = pattern.sub(make_highlight, full_sentence)
     
     # 顯示字卡
