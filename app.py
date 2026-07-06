@@ -41,13 +41,14 @@ st.markdown("""
     [data-testid="stVerticalBlock"] {
         gap: 0.25rem !important;
     }
-    /* 縮小單字卡容器內邊距，並固定高度避免翻頁/翻轉時下方按鈕位置跳動 */
+    /* 縮小單字卡容器內邊距 */
     [data-testid="stVerticalBlockBorderWrapper"] {
         padding: 0.4rem !important;
-        min-height: 230px !important;
-        display: flex !important;
-        flex-direction: column !important;
+    }
+    /* 讓固定高度容器內的文字置中對齊 */
+    [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlock"] {
         justify-content: center !important;
+        height: 100% !important;
     }
     /* 縮小所有按鈕的上下內邊距與高度 */
     div.stButton > button {
@@ -145,14 +146,13 @@ if df is not None:
     hidden_sentence = pattern.sub(" `_______` ", full_sentence)
     
     # === 顯示單字卡內容 ===
-    with st.container(border=True):
+    with st.container(height=220, border=True):
         if not st.session_state.show_definition:
             st.info(hidden_sentence)
             st.markdown(f"<p style='text-align: center; color: #FF4B4B; font-weight: bold; margin-top: 5px; margin-bottom: 5px;'>當前單字 Score：{current_vocab['Score']}</p>", unsafe_allow_html=True)
         else:
-            st.markdown(f"<h2 style='text-align: center; color: #4A90E2; margin-top: 5px; margin-bottom: 5px;'>{target_word}</h2>", unsafe_allow_html=True)
-            st.markdown(f"<p style='text-align: center; color: #888888; margin-bottom: 5px;'>Score：{current_vocab['Score']}</p>", unsafe_allow_html=True)
-            st.write("---")
+            st.markdown(f"<h2 style='text-align: center; color: #4A90E2; font-size: 26px; margin-top: 2px; margin-bottom: 2px;'>{target_word}</h2>", unsafe_allow_html=True)
+            st.markdown(f"<p style='text-align: center; color: #888888; margin-bottom: 4px;'>Score：{current_vocab['Score']}</p>", unsafe_allow_html=True)
             st.success(full_sentence)
 
     # 🛠️ 使用客製化容器包裹，確保左右並排的網頁底層死指令只適用於這兩個加減分按鈕
