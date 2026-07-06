@@ -31,7 +31,7 @@ st.markdown("""
     [data-testid="stVerticalBlock"] {
         gap: 0.25rem !important;
     }
-    /* 縮小單字卡容器內邊距 */
+    /* 縮小單字卡外圍容器內邊距 */
     [data-testid="stVerticalBlockBorderWrapper"] {
         padding: 0.4rem !important;
     }
@@ -46,14 +46,41 @@ st.markdown("""
         min-height: 2.2rem !important;
         line-height: 1.2 !important;
     }
-    /* 縮小 info/success 提示框的內邊距 */
-    div[data-testid="stAlert"] {
-        padding: 0.5rem 0.8rem !important;
-    }
     /* 縮小進度條與其文字的間距 */
     div[data-testid="stProgress"] {
         margin-top: 0 !important;
         margin-bottom: 0 !important;
+    }
+    
+    /* 🎯 自訂字卡文字容器：確保正反面字體大小、行高、顏色完全一樣，翻轉時絕不跳動 */
+    .sentence-container {
+        color: #ffffff !important;
+        font-size: 17px !important;
+        line-height: 1.6 !important;
+        text-align: left !important;
+        padding: 5px 10px !important;
+    }
+    /* 🎯 正面未翻轉的空白框樣式：高度與內邊距和反面高亮單字完美對齊 */
+    .blank-placeholder {
+        font-size: 22px !important;
+        font-weight: bold !important;
+        color: #888888 !important;
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        padding: 2px 8px !important;
+        border-radius: 4px !important;
+        margin: 0 4px !important;
+        display: inline-block !important;
+    }
+    /* 🎯 反面翻轉後的放大高亮單字樣式 */
+    .highlight-word {
+        font-size: 22px !important;
+        font-weight: bold !important;
+        color: #5294e2 !important;
+        background-color: rgba(82, 148, 226, 0.15) !important;
+        padding: 2px 8px !important;
+        border-radius: 4px !important;
+        margin: 0 4px !important;
+        display: inline-block !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -134,20 +161,22 @@ if df is not None:
     if not pattern.search(full_sentence):
         pattern = re.compile(re.escape(target_word), re.IGNORECASE)
         
-    # 未翻轉前：維持原本清爽的底色空格
-    hidden_sentence = pattern.sub(" `_______` ", full_sentence)
+    # 🎯 正面（未翻轉）：不使用 st.info 藍色框，用自訂 HTML 呈現沒有藍底的優雅空格
+    blank_html = '<span class="blank-placeholder">_______</span>'
+    hidden_sentence_html = pattern.sub(blank_html, full_sentence)
     
-    # 🎯 核心優化：翻轉後，將單字放大至 22px、加粗（bold）、並設定醒目的深海藍/淺藍高亮，且前後留出適當間距
-    highlighted_html = f'<span style="font-size: 22px; font-weight: bold; color: #5294e2; background-color: rgba(82, 148, 226, 0.15); padding: 2px 8px; border-radius: 4px; margin: 0 4px;">{target_word}</span>'
+    # 🎯 反面（翻轉後）：結構完全對等，只將內容替換為放大高亮單字
+    highlighted_html = f'<span class="highlight-word">{target_word}</span>'
     revealed_sentence_html = pattern.sub(highlighted_html, full_sentence)
     
     # === 顯示單字卡內容 ===
     with st.container(height=180, border=True):
         if not st.session_state.show_definition:
-            st.info(hidden_sentence)
+            # 正面渲染
+            st.markdown(f'<div class="sentence-container">{hidden_sentence_html}</div>', unsafe_allow_html=True)
         else:
-            # 🎯 使用 markdown 渲染包含自訂 CSS 放大樣式的正確答案句子
-            st.markdown(f'<div style="color: #ffffff; line-height: 1.6;">{revealed_sentence_html}</div>', unsafe_allow_html=True)
+            # 反面渲染：排版樣式完全與正面複製對稱
+            st.markdown(f'<div class="sentence-container">{revealed_sentence_html}</div>', unsafe_allow_html=True)
 
     # 🛠️ 使用客製化容器包裹，確保左右並排的網頁底層死指令只適用於這兩個加減分按鈕
     st.markdown('<div class="score-container">', unsafe_allow_html=True)
