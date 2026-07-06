@@ -4,8 +4,37 @@ import random
 import re
 import requests
 
-# === 標題設定 ===
-st.title("單字複習APP")
+# === 🛠️ 頂部空間與標題優化（解決滑動問題） ===
+# 透過 CSS 移除網頁頂部預留的超大空白，並縮小標題字體
+st.markdown("""
+    <style>
+    /* 移除 Streamlit 預設的頂部區塊空白 */
+    .block-container {
+        padding-top: 1.5rem !important;
+        padding-bottom: 1rem !important;
+    }
+    /* 客製化小標題樣式 */
+    .custom-title {
+        font-size: 20px !important;
+        font-weight: bold;
+        margin-bottom: 10px !important;
+        color: #FFFFFF;
+    }
+    /* 強制彈性行排版，徹底鎖定按鈕 50% 寬度不准換行 */
+    [data-testid="column"] {
+        width: calc(50% - 6px) !important;
+        flex: 1 1 calc(50% - 6px) !important;
+        min-width: calc(50% - 6px) !important;
+    }
+    /* 緊縮元件之間的上下間距 */
+    .element-container {
+        margin-bottom: 0.4rem !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# 使用自訂的小標題，取代原本佔空間的 st.title
+st.markdown('<p class="custom-title">單字複習APP</p>', unsafe_allow_html=True)
 
 # ===================================================
 # 🔗 請填入你的 Google 試算表 CSV 連結與你部署的 App Script 網址
@@ -35,7 +64,7 @@ def update_score_in_cloud(word, action):
             res = requests.get(API_URL, params={"word": word, "action": action})
             if "Success" in res.text:
                 st.toast(f"✅ 雲端同步成功！單字 [{word}] 分數已變更。")
-                st.cache_data.clear() # 清除快取，確保下次能抓到最新狀態
+                st.cache_data.clear() 
             else:
                 st.error(f"雲端改分失敗: {res.text}")
         except Exception as e:
@@ -47,7 +76,7 @@ if df is not None:
         st.error("❌ 雲端檔案欄位不符！您的試算表必須包含：'Word'、'Sentence'、'Score'")
         st.stop()
         
-    # 側邊欄簡化：同步功能與分數篩選
+    # 側邊欄簡化
     st.sidebar.header("⚙️ 設定與功能")
     if st.sidebar.button("🔄 同步雲端最新單字"):
         st.cache_data.clear()
@@ -65,8 +94,8 @@ if df is not None:
     state_key = f"vocab_drive_{str(selected_scores)}"
     if st.session_state.get("current_state_key") != state_key:
         raw_list = filtered_df.to_dict(orient='records')
-        random.shuffle(raw_list)  # 同分抽樣隨機化
-        st.session_state.vocab_list = sorted(raw_list, key=lambda x: x['Score'])  # 由低到高排序
+        random.shuffle(raw_list)  
+        st.session_state.vocab_list = sorted(raw_list, key=lambda x: x['Score'])  
         st.session_state.current_index = 0
         st.session_state.show_definition = False
         st.session_state.current_state_key = state_key
@@ -88,26 +117,14 @@ if df is not None:
     with st.container(border=True):
         if not st.session_state.show_definition:
             st.info(hidden_sentence)
-            st.markdown(f"<p style='text-align: center; color: #FF4B4B; font-weight: bold; margin-top: 15px;'>當前單字 Score：{current_vocab['Score']}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='text-align: center; color: #FF4B4B; font-weight: bold; margin-top: 5px; margin-bottom: 5px;'>當前單字 Score：{current_vocab['Score']}</p>", unsafe_allow_html=True)
         else:
-            st.markdown(f"<h1 style='text-align: center; color: #4A90E2;'>{target_word}</h1>", unsafe_allow_html=True)
-            st.markdown(f"<p style='text-align: center; color: #888888;'>Score：{current_vocab['Score']}</p>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align: center; color: #4A90E2; margin-top: 5px; margin-bottom: 5px;'>{target_word}</h2>", unsafe_allow_html=True)
+            st.markdown(f"<p style='text-align: center; color: #888888; margin-bottom: 5px;'>Score：{current_vocab['Score']}</p>", unsafe_allow_html=True)
             st.write("---")
-            st.write(f"**💡 完整句子：**")
             st.success(full_sentence)
 
-    # 🛠️ 注入終極網頁 CSS 手段，強制手機版網頁不准換行
-    st.markdown("""
-        <style>
-        [data-testid="column"] {
-            width: calc(50% - 8px) !important;
-            flex: 1 1 calc(50% - 8px) !important;
-            min-width: calc(50% - 8px) !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    # 分數按鈕（透過 CSS 強制並排，文字進一步簡化提高容錯率）
+    # 分數按鈕（加強版 50% 寬度強制並排）
     score_col1, score_col2 = st.columns(2, gap="small")
     with score_col1:
         if st.button("👍 Score+1", use_container_width=True):
@@ -120,10 +137,8 @@ if df is not None:
             st.session_state.vocab_list[current_idx]['Score'] -= 1
             st.rerun()
 
-    st.write("") # 留空行
-
     # 單字卡切換控制按鈕
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3 = st.columns(3, gap="small")
     with col1:
         if st.button("⬅️ 上一個", use_container_width=True):
             if st.session_state.current_index > 0:
@@ -131,7 +146,7 @@ if df is not None:
                 st.session_state.show_definition = False
                 st.rerun()
     with col2:
-        if st.button("🔄 翻轉單字卡", type="primary", use_container_width=True):
+        if st.button("🔄 翻轉", type="primary", use_container_width=True):
             st.session_state.show_definition = not st.session_state.show_definition
             st.rerun()
     with col3:
