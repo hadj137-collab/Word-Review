@@ -7,7 +7,7 @@ import requests
 # === 🛠️ 頂部空間與排版精確優化 ===
 st.markdown("""
     <style>
-    /* 🎯 調整：增加頂部邊距（從 1.2rem 調至 2.5rem），將整個畫面外框往下推，避免碰到頂部工具列文字 */
+    /* 調整：增加頂部邊距，將整個畫面外框往下推，避免碰到頂部工具列文字 */
     .block-container {
         padding-top: 2.5rem !important;
         padding-bottom: 0.5rem !important;
@@ -54,17 +54,6 @@ st.markdown("""
     div[data-testid="stProgress"] {
         margin-top: 0 !important;
         margin-bottom: 0 !important;
-    }
-    /* 強制單字卡內部的 HTML 元素完全水平居中 */
-    .center-word {
-        text-align: center !important;
-        color: #4A90E2 !important;
-        font-size: 30px !important;
-        font-weight: bold !important;
-        margin-top: 5px !important;
-        margin-bottom: 12px !important;
-        width: 100% !important;
-        display: block !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -120,7 +109,7 @@ if df is not None:
     
     filtered_df = df[df['Score'].isin(selected_scores)]
     if filtered_df.empty:
-        st.warning("⚠️ 目前選取的 Score 條件下沒有 any 單字。")
+        st.warning("⚠️ 目前選取的 Score 條件下沒有任何單字。")
         st.stop()
 
     # 初始化排序邏輯
@@ -140,19 +129,27 @@ if df is not None:
     target_word = str(current_vocab['Word']).strip()
     full_sentence = str(current_vocab['Sentence'])
     
-    # 正規表達式智慧挖空
+    # === 智慧替換邏輯（正向挖空與翻轉嵌入） ===
+    # 用正則表達式尋找句子中的單字（考慮邊界與大小寫）
     pattern = re.compile(rf'\b{re.escape(target_word)}\b', re.IGNORECASE)
     if not pattern.search(full_sentence):
         pattern = re.compile(re.escape(target_word), re.IGNORECASE)
+        
+    # 未翻轉前：把單字變成空格
     hidden_sentence = pattern.sub(" `_______` ", full_sentence)
+    
+    # 🎯 核心改動：按下翻轉時，把單字用醒目的高亮樣式直接嵌入在原句子裡
+    highlighted_word = f"**` {target_word} `**"
+    revealed_sentence = pattern.sub(highlighted_word, full_sentence)
     
     # === 顯示單字卡內容 ===
     with st.container(height=180, border=True):
         if not st.session_state.show_definition:
+            # 未翻轉時：顯示挖空句
             st.info(hidden_sentence)
         else:
-            st.markdown(f'<div class="center-word">{target_word}</div>', unsafe_allow_html=True)
-            st.success(full_sentence)
+            # 🎯 翻轉後：不顯示獨立的大單字，直接顯示帶有高亮正確答案的完整句子！
+            st.success(revealed_sentence)
 
     # 🛠️ 使用客製化容器包裹，確保左右並排的網頁底層死指令只適用於這兩個加減分按鈕
     st.markdown('<div class="score-container">', unsafe_allow_html=True)
