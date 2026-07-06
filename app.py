@@ -48,7 +48,7 @@ if df is not None:
         st.error("❌ 雲端檔案欄位不符！您的試算表必須包含：'Word'、'Sentence'、'Score'")
         st.stop()
         
-    # 側邊欄簡化：只保留同步功能與分數篩選
+    # 側邊欄簡化：同步功能與分數篩選
     st.sidebar.header("⚙️ 設定與功能")
     if st.sidebar.button("🔄 同步雲端最新單字"):
         st.cache_data.clear()
@@ -85,12 +85,10 @@ if df is not None:
         pattern = re.compile(re.escape(target_word), re.IGNORECASE)
     hidden_sentence = pattern.sub(" `_______` ", full_sentence)
     
-    st.header("🃏 單字卡翻頁")
-    
-    # 顯示單字卡內容
+    # === 顯示單字卡內容 ===
     with st.container(border=True):
         if not st.session_state.show_definition:
-            st.markdown("<h3 style='text-align: center; color: #888888;'>📝 請猜猜空格中的單字：</h3>", unsafe_allow_html=True)
+            # 💡 已移除原先的提示標頭，直接顯示例句題目
             st.info(hidden_sentence)
             st.markdown(f"<p style='text-align: center; color: #FF4B4B; font-weight: bold; margin-top: 15px;'>當前單字 Score：{current_vocab['Score']}</p>", unsafe_allow_html=True)
             st.write("---")
@@ -102,7 +100,7 @@ if df is not None:
             st.write(f"**💡 完整句子：**")
             st.success(full_sentence)
 
-    # 調整分數按鈕（直接連連動雲端）
+    # 調整分數按鈕（直接連動雲端）
     score_col1, score_col2 = st.columns(2)
     with score_col1:
         if st.button("👍 太簡單了！Score + 1", use_container_width=True):
