@@ -41,9 +41,13 @@ st.markdown("""
     [data-testid="stVerticalBlock"] {
         gap: 0.25rem !important;
     }
-    /* 縮小單字卡容器內邊距 */
+    /* 縮小單字卡容器內邊距，並固定高度避免翻頁/翻轉時下方按鈕位置跳動 */
     [data-testid="stVerticalBlockBorderWrapper"] {
         padding: 0.4rem !important;
+        min-height: 230px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
     }
     /* 縮小所有按鈕的上下內邊距與高度 */
     div.stButton > button {
