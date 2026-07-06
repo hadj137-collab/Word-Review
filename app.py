@@ -96,15 +96,15 @@ if df is not None:
             st.write(f"**💡 完整句子：**")
             st.success(full_sentence)
 
-    # 調整分數按鈕（已調整為同一行左右並排）
-    score_col1, score_col2 = st.columns(2)
+    # 🛠️ 關鍵優化：縮小間距，確保手機螢幕也塞得下並排按鈕
+    score_col1, score_col2 = st.columns(2, gap="small")
     with score_col1:
-        if st.button("👍 太簡單了！Score + 1", use_container_width=True):
+        if st.button("👍 Score + 1", use_container_width=True):
             update_score_in_cloud(target_word, "up")
             st.session_state.vocab_list[current_idx]['Score'] += 1
             st.rerun()
     with score_col2:
-        if st.button("👎 還不熟練...Score - 1", use_container_width=True):
+        if st.button("👎 Score - 1", use_container_width=True):
             update_score_in_cloud(target_word, "down")
             st.session_state.vocab_list[current_idx]['Score'] -= 1
             st.rerun()
