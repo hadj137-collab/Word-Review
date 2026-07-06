@@ -7,9 +7,9 @@ import requests
 # === 🛠️ 頂部空間與排版精確優化 ===
 st.markdown("""
     <style>
-    /* 移除 Streamlit 頂部區塊多餘空白，並留出足夠高度避開工具列 */
+    /* 🎯 調整：增加頂部邊距（從 1.2rem 調至 2.5rem），將整個畫面外框往下推，避免碰到頂部工具列文字 */
     .block-container {
-        padding-top: 1.2rem !important;
+        padding-top: 2.5rem !important;
         padding-bottom: 0.5rem !important;
     }
     /* Streamlit 頂部工具列（Share/⭐/✏️/GitHub）變透明且不占版面高度 */
@@ -55,7 +55,7 @@ st.markdown("""
         margin-top: 0 !important;
         margin-bottom: 0 !important;
     }
-    /* 🎯 強制單字卡內部的 HTML 元素完全水平居中 */
+    /* 強制單字卡內部的 HTML 元素完全水平居中 */
     .center-word {
         text-align: center !important;
         color: #4A90E2 !important;
@@ -68,8 +68,6 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-
-# 💡 已徹底移除原本在這裡的「單字複習APP」標題
 
 # ===================================================
 # 🔗 請填入你的 Google 試算表 CSV 連結與你部署的 App Script 網址
@@ -122,7 +120,7 @@ if df is not None:
     
     filtered_df = df[df['Score'].isin(selected_scores)]
     if filtered_df.empty:
-        st.warning("⚠️ 目前選取的 Score 條件下沒有任何單字。")
+        st.warning("⚠️ 目前選取的 Score 條件下沒有 any 單字。")
         st.stop()
 
     # 初始化排序邏輯
@@ -153,7 +151,6 @@ if df is not None:
         if not st.session_state.show_definition:
             st.info(hidden_sentence)
         else:
-            # 🎯 關鍵改動：使用 .center-word 類別，強制單字百分之百置中對齊
             st.markdown(f'<div class="center-word">{target_word}</div>', unsafe_allow_html=True)
             st.success(full_sentence)
 
