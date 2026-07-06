@@ -96,15 +96,26 @@ if df is not None:
             st.write(f"**💡 完整句子：**")
             st.success(full_sentence)
 
-    # 🛠️ 關鍵優化：縮小間距，確保手機螢幕也塞得下並排按鈕
+    # 🛠️ 注入終極網頁 CSS 手段，強制手機版網頁不准換行
+    st.markdown("""
+        <style>
+        [data-testid="column"] {
+            width: calc(50% - 8px) !important;
+            flex: 1 1 calc(50% - 8px) !important;
+            min-width: calc(50% - 8px) !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # 分數按鈕（透過 CSS 強制並排，文字進一步簡化提高容錯率）
     score_col1, score_col2 = st.columns(2, gap="small")
     with score_col1:
-        if st.button("👍 Score + 1", use_container_width=True):
+        if st.button("👍 Score+1", use_container_width=True):
             update_score_in_cloud(target_word, "up")
             st.session_state.vocab_list[current_idx]['Score'] += 1
             st.rerun()
     with score_col2:
-        if st.button("👎 Score - 1", use_container_width=True):
+        if st.button("👎 Score-1", use_container_width=True):
             update_score_in_cloud(target_word, "down")
             st.session_state.vocab_list[current_idx]['Score'] -= 1
             st.rerun()
