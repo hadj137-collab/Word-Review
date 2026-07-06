@@ -4,36 +4,36 @@ import random
 import re
 import requests
 
-# === 🛠️ 頂部空間與標題優化（解決滑動問題） ===
-# 透過 CSS 移除網頁頂部預留的超大空白，並縮小標題字體
+# === 🛠️ 頂部空間與排版精確優化 ===
 st.markdown("""
     <style>
-    /* 移除 Streamlit 預設的頂部區塊空白 */
+    /* 移除 Streamlit 頂部區塊多餘空白 */
     .block-container {
         padding-top: 1.5rem !important;
         padding-bottom: 1rem !important;
     }
-    /* 客製化小標題樣式 */
+    /* 精緻標題樣式：確保文字絕對不被切到 */
     .custom-title {
         font-size: 20px !important;
         font-weight: bold;
-        margin-bottom: 10px !important;
+        margin-bottom: 12px !important;
+        line-height: 1.5 !important;
         color: #FFFFFF;
     }
-    /* 強制彈性行排版，徹底鎖定按鈕 50% 寬度不准換行 */
-    [data-testid="column"] {
+    /* 🎯 修正：只有在特定的分數按鈕容器內，才強制左右並排 50% */
+    .score-container [data-testid="column"] {
         width: calc(50% - 6px) !important;
         flex: 1 1 calc(50% - 6px) !important;
         min-width: calc(50% - 6px) !important;
     }
-    /* 緊縮元件之間的上下間距 */
+    /* 緊縮所有元件的上下間距，騰出更多垂直空間 */
     .element-container {
-        margin-bottom: 0.4rem !important;
+        margin-bottom: 0.3rem !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 使用自訂的小標題，取代原本佔空間的 st.title
+# 顯示例落大方的標題
 st.markdown('<p class="custom-title">單字複習APP</p>', unsafe_allow_html=True)
 
 # ===================================================
@@ -124,7 +124,8 @@ if df is not None:
             st.write("---")
             st.success(full_sentence)
 
-    # 分數按鈕（加強版 50% 寬度強制並排）
+    # 🛠️ 使用客製化容器包裹，確保左右並排的網頁底層死指令只適用於這兩個加減分按鈕
+    st.markdown('<div class="score-container">', unsafe_allow_html=True)
     score_col1, score_col2 = st.columns(2, gap="small")
     with score_col1:
         if st.button("👍 Score+1", use_container_width=True):
@@ -136,6 +137,7 @@ if df is not None:
             update_score_in_cloud(target_word, "down")
             st.session_state.vocab_list[current_idx]['Score'] -= 1
             st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # 單字卡切換控制按鈕
     col1, col2, col3 = st.columns(3, gap="small")
