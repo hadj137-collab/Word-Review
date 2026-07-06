@@ -9,25 +9,15 @@ st.markdown("""
     <style>
     /* 移除 Streamlit 頂部區塊多餘空白，並留出足夠高度避開工具列 */
     .block-container {
-        padding-top: 1.8rem !important;
+        padding-top: 1.2rem !important;
         padding-bottom: 0.5rem !important;
     }
-    /* Streamlit 頂部工具列（Share/⭐/✏️/GitHub）會蓋住內容，讓它變透明且不占版面高度 */
+    /* Streamlit 頂部工具列（Share/⭐/✏️/GitHub）變透明且不占版面高度 */
     header[data-testid="stHeader"] {
         background: transparent !important;
-        height: 2rem !important;
+        height: 1.5rem !important;
     }
-    /* 精緻標題樣式：確保文字絕對不被切到 */
-    .custom-title {
-        font-size: 18px !important;
-        font-weight: bold;
-        margin-top: 0.2rem !important;
-        margin-bottom: 4px !important;
-        line-height: 1.4 !important;
-        color: #FFFFFF;
-        padding-top: 2px;
-    }
-    /* 🎯 修正：只有在特定的分數按鈕容器內，才強制左右並排 50% */
+    /* 🎯 只有在特定的分數按鈕容器內，才強制左右並排 50% */
     .score-container [data-testid="column"] {
         width: calc(50% - 6px) !important;
         flex: 1 1 calc(50% - 6px) !important;
@@ -65,11 +55,21 @@ st.markdown("""
         margin-top: 0 !important;
         margin-bottom: 0 !important;
     }
+    /* 🎯 強制單字卡內部的 HTML 元素完全水平居中 */
+    .center-word {
+        text-align: center !important;
+        color: #4A90E2 !important;
+        font-size: 30px !important;
+        font-weight: bold !important;
+        margin-top: 5px !important;
+        margin-bottom: 12px !important;
+        width: 100% !important;
+        display: block !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# 顯示標題
-st.markdown('<p class="custom-title">單字複習APP</p>', unsafe_allow_html=True)
+# 💡 已徹底移除原本在這裡的「單字複習APP」標題
 
 # ===================================================
 # 🔗 請填入你的 Google 試算表 CSV 連結與你部署的 App Script 網址
@@ -149,13 +149,12 @@ if df is not None:
     hidden_sentence = pattern.sub(" `_______` ", full_sentence)
     
     # === 顯示單字卡內容 ===
-    with st.container(height=180, border=True):  # 稍微縮小高度，畫面更緊湊
+    with st.container(height=180, border=True):
         if not st.session_state.show_definition:
             st.info(hidden_sentence)
-            # 已移除原本在這裡顯示的「當前單字 Score」文字
         else:
-            st.markdown(f"<h2 style='text-align: center; color: #4A90E2; font-size: 26px; margin-top: 2px; margin-bottom: 6px;'>{target_word}</h2>", unsafe_allow_html=True)
-            # 已移除原本在這裡顯示的「Score」文字
+            # 🎯 關鍵改動：使用 .center-word 類別，強制單字百分之百置中對齊
+            st.markdown(f'<div class="center-word">{target_word}</div>', unsafe_allow_html=True)
             st.success(full_sentence)
 
     # 🛠️ 使用客製化容器包裹，確保左右並排的網頁底層死指令只適用於這兩個加減分按鈕
