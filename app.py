@@ -217,53 +217,97 @@ if df is not None:
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 🔊 原生 HTML/JS 發音按鈕（修正版：延遲呼叫 + 選擇英文語音 + 語音清單非同步載入容錯）
+    # 🔊 原生 HTML/JS 發音按鈕（修正版：延遲呼叫 + 選擇英文語音 + 語音清單非同步載入容錯 + 樣式對齊）
     safe_sentence = full_sentence.replace("\\", "\\\\").replace("'", "\\'").replace('"', '\\"').replace('\n', ' ')
     html_button_code = f"""
-        <button class="tts-button" id="ttsBtn" onclick="speakSentence()">🔊 播放發音</button>
-        <script>
-            function doSpeak() {{
-                var synth = window.speechSynthesis;
-                var u = new SpeechSynthesisUtterance('{safe_sentence}');
-                u.lang = 'en-US';
-                u.rate = 0.9;
-                u.volume = 1;
+        <html>
+        <head>
+        <style>
+            html, body {{
+                margin: 0;
+                padding: 0;
+                background: transparent;
+            }}
+            .tts-button {{
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                width: 100%;
+                box-sizing: border-box;
+                background-color: #262730;
+                color: #fafafa;
+                border: 1px solid rgba(250, 250, 250, 0.2);
+                padding: 0.5rem 0.75rem;
+                font-size: 15px;
+                font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, sans-serif;
+                border-radius: 0.5rem;
+                cursor: pointer;
+                transition: background-color 0.1s ease, border-color 0.1s ease;
+            }}
+            .tts-button:active {{
+                background-color: #5294e2;
+                border-color: #5294e2;
+            }}
+        </style>
+        </head>
+        <body>
+            <button class="tts-button" id="ttsBtn" onclick="speakSentence()">
+                <span>🔊</span><span>播放發音</span>
+            </button>
+            <script>
+                function doSpeak() {{
+                    var synth = window.speechSynthesis;
+                    var u = new SpeechSynthesisUtterance('{safe_sentence}');
+                    u.lang = 'en-US';
+                    u.rate = 0.9;
+                    u.volume = 1;
 
-                var voices = synth.getVoices();
-                if (voices.length > 0) {{
-                    var enVoice = voices.find(function(v) {{
-                        return v.lang && v.lang.toLowerCase().indexOf('en') === 0;
-                    }});
-                    if (enVoice) {{
-                        u.voice = enVoice;
+                    var voices = synth.getVoices();
+                    if (voices.length > 0) {{
+                        var enVoice = voices.find(function(v) {{
+                            return v.lang && v.lang.toLowerCase().indexOf('en') === 0;
+                        }});
+                        if (enVoice) {{
+                            u.voice = enVoice;
+                        }}
+                    }}
+
+                    u.onerror = function(e) {{
+                        console.error('TTS error:', e.error);
+                    }};
+
+                    synth.speak(u);
+                }}
+
+                function speakSentence() {{
+                    var synth = window.speechSynthesis;
+                    synth.cancel();
+
+                    if (synth.getVoices().length === 0) {{
+                        synth.onvoiceschanged = function() {{
+                            setTimeout(doSpeak, 50);
+                        }};
+                        setTimeout(doSpeak, 300);
+                    }} else {{
+                        setTimeout(doSpeak, 100);
                     }}
                 }}
+            </script>
+        </body>
+        </html>
+    """
+    st.components.v1.html(html_button_code, height=48)
 
-                u.onerror = function(e) {{
-                    console.error('TTS error:', e.error);
-                }};
+    # 🔄 翻轉按鈕
+    if st.button("🔄 翻轉", type="primary", use_container_width=True):
+        st.session_state.show_definition = not st.session_state.show_definition
+        st.rerun()
 
-                synth.speak(u);
-            }}
-
-            function speakSentence() {{
-                var synth = window.speechSynthesis;
-                synth.cancel();
-
-                // Android Chrome 上 cancel() 是非同步的，
-                // 若語音清單尚未載入，先等待 voiceschanged 事件；
-                // 否則稍微延遲後再呼叫 speak()，避免被前一次 cancel() 蓋掉。
-                if (synth.getVoices().length === 0) {{
-                    synth.onvoiceschanged = function() {{
-                        setTimeout(doSpeak, 50);
-                    }};
-                    // 保底：就算 voiceschanged 沒觸發，也強制嘗試播放
-                    setTimeout(doSpeak, 300);
-                }} else {{
-                    setTimeout(doSpeak, 100);
-                }}
-            }}
-        </script>
+    # 進度條
+    display_idx = min(current_idx + 1, len(vocab_list))
+    st.progress(display_idx / len(vocab_list), text=f"進度: {display_idx} / {len(vocab_list)}")
+t>
     """
     st.components.v1.html(html_button_code, height=60)
 
