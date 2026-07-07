@@ -4,6 +4,12 @@ import random
 import re
 import requests
 
+# === 🌟 網頁全域設定 ===
+st.set_page_config(
+    page_title="英文單字複習",
+    page_icon="📚",
+)
+
 # === 🛠️ 頂部空間與排版精確優化 ===
 st.markdown("""
     <style>
@@ -127,75 +133,5 @@ if df is not None:
     state_key = f"vocab_drive_{selected_sheet}_{str(selected_scores)}"
     if st.session_state.get("current_state_key") != state_key:
         raw_list = filtered_df.to_dict(orient='records')
-        # 先進行隨機打散，避免同分數的單字每次出現順序都一模一樣
         random.shuffle(raw_list)  
-        # 🎯 核心優化：依 Score 從小到大排序（分數低的排前面優先複習）
-        st.session_state.vocab_list = sorted(raw_list, key=lambda x: x['Score'])  
-        st.session_state.current_index = 0
-        st.session_state.show_definition = False
-        st.session_state.current_state_key = state_key
-
-    vocab_list = st.session_state.vocab_list
-    current_idx = st.session_state.current_index
-    
-    # 🎯 自動重開下一輪機制：當全部刷完時
-    if current_idx >= len(vocab_list):
-        st.cache_data.clear() # 清空舊快取，確保去撈 Google 剛剛最新修改完的分數
-        if "current_state_key" in st.session_state:
-            del st.session_state["current_state_key"] # 刪除 key 迫使下一次讀取時重新抓取分數並由低到高排序
-        st.success("🎉 本輪複習完畢！已自動為您同步雲端最新分數，並從分數最低的單字重新開始！")
-        if st.button("🚀 開始下一輪複習", type="primary", use_container_width=True):
-            st.rerun()
-        st.stop()
-
-    current_vocab = vocab_list[current_idx]
-    target_word = str(current_vocab['Word']).strip()
-    full_sentence = str(current_vocab['Sentence'])
-    
-    pattern = re.compile(rf'\b{re.escape(target_word)}\b', re.IGNORECASE)
-    if not pattern.search(full_sentence):
-        pattern = re.compile(re.escape(target_word), re.IGNORECASE)
-        
-    def make_dynamic_blank(match):
-        word_len = len(match.group(0))
-        return f'<span class="blank-placeholder">{"_" * max(word_len, 5)}</span>'
-        
-    hidden_sentence_html = pattern.sub(make_dynamic_blank, full_sentence)
-    
-    def make_highlight(match):
-        return f'<span class="highlight-word">{match.group(0)}</span>'
-    revealed_sentence_html = pattern.sub(make_highlight, full_sentence)
-    
-    # 顯示字卡
-    with st.container(height=180, border=True):
-        if not st.session_state.show_definition:
-            st.markdown(f'<div class="sentence-container">{hidden_sentence_html}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown(f'<div class="sentence-container">{revealed_sentence_html}</div>', unsafe_allow_html=True)
-
-    def move_to_next():
-        st.session_state.current_index += 1
-        st.session_state.show_definition = False
-
-    # 分數加減按鈕
-    st.markdown('<div class="score-container">', unsafe_allow_html=True)
-    score_col1, score_col2 = st.columns(2, gap="small")
-    with score_col1:
-        if st.button("👍 Score+1", use_container_width=True):
-            update_score_in_cloud(target_word, "up", selected_sheet)
-            move_to_next()
-            st.rerun()
-    with score_col2:
-        if st.button("👎 Score-1", use_container_width=True):
-            update_score_in_cloud(target_word, "down", selected_sheet)
-            move_to_next()
-            st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    if st.button("🔄 翻轉", type="primary", use_container_width=True):
-        st.session_state.show_definition = not st.session_state.show_definition
-        st.rerun()
-
-    # 進度條
-    display_idx = min(current_idx + 1, len(vocab_list))
-    st.progress(display_idx / len(vocab_list), text=f"進度: {display_idx} / {len(vocab_list)}")
+        st.session_state.vocab_list = sorted(raw_list, key=lambda x: x['Score'])
