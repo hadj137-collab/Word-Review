@@ -217,18 +217,55 @@ if df is not None:
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 🔊 原生 HTML/JS 發音按鈕 (100% 繞過瀏覽器限制，不重新載入、點擊直接發音)
-    safe_sentence = full_sentence.replace("'", "\\'").replace('"', '\\"').replace('\n', ' ')
+    # 🔊 原生 HTML/JS 發音按鈕（修正版：延遲呼叫 + 選擇英文語音 + 語音清單非同步載入容錯）
+    safe_sentence = full_sentence.replace("\\", "\\\\").replace("'", "\\'").replace('"', '\\"').replace('\n', ' ')
     html_button_code = f"""
-        <button class="tts-button" onclick="
-            window.speechSynthesis.cancel();
-            var u = new SpeechSynthesisUtterance('{safe_sentence}');
-            u.lang = 'en-US';
-            u.rate = 0.9;
-            window.speechSynthesis.speak(u);
-        ">🔊 播放發音</button>
+        <button class="tts-button" id="ttsBtn" onclick="speakSentence()">🔊 播放發音</button>
+        <script>
+            function doSpeak() {{
+                var synth = window.speechSynthesis;
+                var u = new SpeechSynthesisUtterance('{safe_sentence}');
+                u.lang = 'en-US';
+                u.rate = 0.9;
+                u.volume = 1;
+
+                var voices = synth.getVoices();
+                if (voices.length > 0) {{
+                    var enVoice = voices.find(function(v) {{
+                        return v.lang && v.lang.toLowerCase().indexOf('en') === 0;
+                    }});
+                    if (enVoice) {{
+                        u.voice = enVoice;
+                    }}
+                }}
+
+                u.onerror = function(e) {{
+                    console.error('TTS error:', e.error);
+                }};
+
+                synth.speak(u);
+            }}
+
+            function speakSentence() {{
+                var synth = window.speechSynthesis;
+                synth.cancel();
+
+                // Android Chrome 上 cancel() 是非同步的，
+                // 若語音清單尚未載入，先等待 voiceschanged 事件；
+                // 否則稍微延遲後再呼叫 speak()，避免被前一次 cancel() 蓋掉。
+                if (synth.getVoices().length === 0) {{
+                    synth.onvoiceschanged = function() {{
+                        setTimeout(doSpeak, 50);
+                    }};
+                    // 保底：就算 voiceschanged 沒觸發，也強制嘗試播放
+                    setTimeout(doSpeak, 300);
+                }} else {{
+                    setTimeout(doSpeak, 100);
+                }}
+            }}
+        </script>
     """
-    st.markdown(html_button_code, unsafe_allow_html=True)
+    st.components.v1.html(html_button_code, height=60)
 
     # 🔄 翻轉按鈕
     if st.button("🔄 翻轉", type="primary", use_container_width=True):
