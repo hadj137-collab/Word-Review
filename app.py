@@ -134,4 +134,91 @@ if df is not None:
     if st.session_state.get("current_state_key") != state_key:
         raw_list = filtered_df.to_dict(orient='records')
         random.shuffle(raw_list)  
-        st.session_state.vocab_list = sorted(raw_list, key=lambda x: x['Score'])
+        st.session_state.vocab_list = sorted(raw_list, key=lambda x: x['Score'])  
+        st.session_state.current_index = 0
+        st.session_state.show_definition = False
+        st.session_state.current_state_key = state_key
+
+    vocab_list = st.session_state.vocab_list
+    current_idx = st.session_state.current_index
+    
+    # 🎯 自動重開下一輪機制
+    if current_idx >= len(vocab_list):
+        st.cache_data.clear() 
+        if "current_state_key" in st.session_state:
+            del st.session_state["current_state_key"] 
+        st.success("🎉 本輪複習完畢！已自動為您同步雲端最新分數，並從分數最低的單字重新開始！")
+        if st.button("🚀 開始下一輪複習", type="primary", use_container_width=True):
+            st.rerun()
+        st.stop()
+
+    current_vocab = vocab_list[current_idx]
+    target_word = str(current_vocab['Word']).strip()
+    full_sentence = str(current_vocab['Sentence'])
+    
+    pattern = re.compile(rf'\b{re.escape(target_word)}\b', re.IGNORECASE)
+    if not pattern.search(full_sentence):
+        pattern = re.compile(re.escape(target_word), re.IGNORECASE)
+        
+    def make_dynamic_blank(match):
+        word_len = len(match.group(0))
+        return f'<span class="blank-placeholder">{"_" * max(word_len, 5)}</span>'
+        
+    hidden_sentence_html = pattern.sub(make_dynamic_blank, full_sentence)
+    
+    def make_highlight(match):
+        return f'<span class="highlight-word">{match.group(0)}</span>'
+    revealed_sentence_html = pattern.sub(make_highlight, full_sentence)
+    
+    # 顯示字卡
+    with st.container(height=180, border=True):
+        if not st.session_state.show_definition:
+            st.markdown(f'<div class="sentence-container">{hidden_sentence_html}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="sentence-container">{revealed_sentence_html}</div>', unsafe_allow_html=True)
+
+    def move_to_next():
+        st.session_state.current_index += 1
+        st.session_state.show_definition = False
+
+    # 分數加減按鈕
+    st.markdown('<div class="score-container">', unsafe_allow_html=True)
+    score_col1, score_col2 = st.columns(2, gap="small")
+    with score_col1:
+        if st.button("👍 Score+1", use_container_width=True):
+            update_score_in_cloud(target_word, "up", selected_sheet)
+            move_to_next()
+            st.rerun()
+    with score_col2:
+        if st.button("👎 Score-1", use_container_width=True):
+            update_score_in_cloud(target_word, "down", selected_sheet)
+            move_to_next()
+            st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # 🔊 播放發音按鈕 (改良安全版：不再使用 st.components.v1.html，改用隱藏 iframe 注入)
+    if st.button("🔊 播放發音", use_container_width=True):
+        safe_sentence = full_sentence.replace("'", "\\'").replace('"', '\\"').replace('\n', ' ')
+        # 透過無干擾的非同步 iframe 來執行語音，絕對不會卡死畫面
+        js_code = f"""
+            <iframe src="about:blank" style="display:none;" onload="
+                try {{
+                    var w = window.parent;
+                    w.speechSynthesis.cancel();
+                    var u = new w.SpeechSynthesisUtterance('{safe_sentence}');
+                    u.lang = 'en-US';
+                    u.rate = 0.9;
+                    w.speechSynthesis.speak(u);
+                }} catch(e) {{}}
+            "></iframe>
+        """
+        st.markdown(js_code, unsafe_allow_html=True)
+
+    # 🔄 翻轉按鈕
+    if st.button("🔄 翻轉", type="primary", use_container_width=True):
+        st.session_state.show_definition = not st.session_state.show_definition
+        st.rerun()
+
+    # 進度條
+    display_idx = min(current_idx + 1, len(vocab_list))
+    st.progress(display_idx / len(vocab_list), text=f"進度: {display_idx} / {len(vocab_list)}")
