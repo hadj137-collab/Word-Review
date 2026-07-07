@@ -4,12 +4,6 @@ import random
 import re
 import requests
 
-# === 🌟 網頁全域設定 (必須放在最前面) ===
-st.set_page_config(
-    page_title="英文單字複習",
-    page_icon="📚",
-)
-
 # === 🛠️ 頂部空間與排版精確優化 ===
 st.markdown("""
     <style>
