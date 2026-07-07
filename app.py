@@ -24,6 +24,18 @@ st.markdown("""
     [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlock"] { justify-content: center !important; height: 100% !important; }
     div.stButton > button { padding: 0.25rem 0.5rem !important; min-height: 2.2rem !important; line-height: 1.2 !important; }
     div[data-testid="stProgress"] { margin-top: 0 !important; margin-bottom: 0 !important; }
+
+    /* 讓 components.v1.html 產生的 iframe 區塊跟其他按鈕間距一致 */
+    div[data-testid="stIFrame"] { display: block !important; }
+    div[data-testid="stIFrame"] + div,
+    div:has(> div[data-testid="stIFrame"]) {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+    div[data-testid="element-container"]:has(iframe) {
+        margin-top: 0.25rem !important;
+        margin-bottom: 0.25rem !important;
+    }
     
     .sentence-container { 
         color: #ffffff !important; 
