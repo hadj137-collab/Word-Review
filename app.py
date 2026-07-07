@@ -217,15 +217,34 @@ if df is not None:
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 🔊 原生 HTML/JS 發音按鈕 (100% 繞過瀏覽器限制，不重新載入、點擊直接發音)
+    # 🔊 原生 HTML/JS 發音按鈕 (加入 Android Chrome 相容性修正：
+    # 1) 等待 getVoices() 非同步載入完成才發音，避免語音清單是空的導致 speak() 靜默失敗
+    # 2) 明確挑選 en 開頭的語音，找不到才 fallback 用瀏覽器預設
+    # 3) 加上 resume() 暖機，解決部分 Android Chrome 版本 speechSynthesis 卡在暫停狀態的問題
     safe_sentence = full_sentence.replace("'", "\\'").replace('"', '\\"').replace('\n', ' ')
     html_button_code = f"""
-        <button class="tts-button" onclick="
-            window.speechSynthesis.cancel();
-            var u = new SpeechSynthesisUtterance('{safe_sentence}');
-            u.lang = 'en-US';
-            u.rate = 0.9;
-            window.speechSynthesis.speak(u);
+        <button class="tts-button" id="ttsBtn_{current_idx}" onclick="
+            (function() {{
+                var synth = window.speechSynthesis;
+                synth.cancel();
+                synth.resume();
+                function speakNow() {{
+                    var voices = synth.getVoices();
+                    var u = new SpeechSynthesisUtterance('{safe_sentence}');
+                    u.lang = 'en-US';
+                    u.rate = 0.9;
+                    var enVoice = voices.find(function(v) {{ return v.lang && v.lang.toLowerCase().indexOf('en') === 0; }});
+                    if (enVoice) {{ u.voice = enVoice; }}
+                    synth.speak(u);
+                }}
+                if (synth.getVoices().length === 0) {{
+                    synth.onvoiceschanged = function() {{ speakNow(); }};
+                    // 部分 Android Chrome 不會觸發 voiceschanged，加上保底逾時
+                    setTimeout(speakNow, 250);
+                }} else {{
+                    speakNow();
+                }}
+            }})();
         ">🔊 播放發音</button>
     """
     st.markdown(html_button_code, unsafe_allow_html=True)
