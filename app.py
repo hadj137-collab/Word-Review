@@ -57,6 +57,27 @@ st.markdown("""
         display: inline !important; 
         white-space: normal !important;
     }
+
+    /* 原生 HTML 發音按鈕樣式優化，使其與 Streamlit 按鈕一致 */
+    .tts-button {
+        display: block;
+        width: 100%;
+        background-color: #262730;
+        color: #ffffff;
+        border: 1px solid rgba(250, 250, 250, 0.2);
+        padding: 0.45rem 0.5rem;
+        font-size: 14px;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        text-align: center;
+        box-sizing: border-box;
+        margin-bottom: 0.25rem;
+        transition: background-color 0.1s ease;
+    }
+    .tts-button:active {
+        background-color: #5294e2;
+        border-color: #5294e2;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -196,23 +217,18 @@ if df is not None:
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 🔊 播放發音按鈕 (改良安全版：不再使用 st.components.v1.html，改用隱藏 iframe 注入)
-    if st.button("🔊 播放發音", use_container_width=True):
-        safe_sentence = full_sentence.replace("'", "\\'").replace('"', '\\"').replace('\n', ' ')
-        # 透過無干擾的非同步 iframe 來執行語音，絕對不會卡死畫面
-        js_code = f"""
-            <iframe src="about:blank" style="display:none;" onload="
-                try {{
-                    var w = window.parent;
-                    w.speechSynthesis.cancel();
-                    var u = new w.SpeechSynthesisUtterance('{safe_sentence}');
-                    u.lang = 'en-US';
-                    u.rate = 0.9;
-                    w.speechSynthesis.speak(u);
-                }} catch(e) {{}}
-            "></iframe>
-        """
-        st.markdown(js_code, unsafe_allow_html=True)
+    # 🔊 原生 HTML/JS 發音按鈕 (100% 繞過瀏覽器限制，不重新載入、點擊直接發音)
+    safe_sentence = full_sentence.replace("'", "\\'").replace('"', '\\"').replace('\n', ' ')
+    html_button_code = f"""
+        <button class="tts-button" onclick="
+            window.speechSynthesis.cancel();
+            var u = new SpeechSynthesisUtterance('{safe_sentence}');
+            u.lang = 'en-US';
+            u.rate = 0.9;
+            window.speechSynthesis.speak(u);
+        ">🔊 播放發音</button>
+    """
+    st.markdown(html_button_code, unsafe_allow_html=True)
 
     # 🔄 翻轉按鈕
     if st.button("🔄 翻轉", type="primary", use_container_width=True):
