@@ -189,19 +189,29 @@ if df is not None:
     target_word = str(current_vocab['Word']).strip()
     full_sentence = str(current_vocab['Sentence'])
     
-    pattern = re.compile(rf'\b{re.escape(target_word)}\b', re.IGNORECASE)
-    if not pattern.search(full_sentence):
-        pattern = re.compile(re.escape(target_word), re.IGNORECASE)
-        
+    # 🎯 融合升級：將 Word 欄位以空格切開，支援多個分開的關鍵字（如 chalk hopscotch）同時挖空
+    words_to_hide = [w.strip() for w in re.split(r'\s+', target_word) if w.strip()]
+    # 按長度由長到短排序，防止短單字優先取代時破壞長單字結構
+    words_to_hide = sorted(words_to_hide, key=len, reverse=True)
+    
     def make_dynamic_blank(match):
         word_len = len(match.group(0))
         return f'<span class="blank-placeholder">{"_" * max(word_len, 5)}</span>'
         
-    hidden_sentence_html = pattern.sub(make_dynamic_blank, full_sentence)
-    
     def make_highlight(match):
         return f'<span class="highlight-word">{match.group(0)}</span>'
-    revealed_sentence_html = pattern.sub(make_highlight, full_sentence)
+
+    hidden_sentence_html = full_sentence
+    revealed_sentence_html = full_sentence
+
+    # 針對切開後的每一個獨立單字進行正則比對替換
+    for sub_word in words_to_hide:
+        pattern = re.compile(rf'\b{re.escape(sub_word)}\b', re.IGNORECASE)
+        if not pattern.search(full_sentence):
+            pattern = re.compile(re.escape(sub_word), re.IGNORECASE)
+            
+        hidden_sentence_html = pattern.sub(make_dynamic_blank, hidden_sentence_html)
+        revealed_sentence_html = pattern.sub(make_highlight, revealed_sentence_html)
     
     # 顯示字卡
     with st.container(height=180, border=True):
@@ -319,3 +329,4 @@ if df is not None:
     # 進度條
     display_idx = min(current_idx + 1, len(vocab_list))
     st.progress(display_idx / len(vocab_list), text=f"進度: {display_idx} / {len(vocab_list)}")
+    
